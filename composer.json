@@ -1,0 +1,22 @@
+{
+    "name": "kk-seb/http",
+    "type": "library",
+    "description": "AJAX (primarily Angular-oriented) service and REST (primarily KKI) client utilities.",
+    "homepage": "https://kkgit.kk.dk/php-psr.kk-seb/http",
+    "authors": [
+        {
+            "name": "Jacob Friis Mathiasen",
+            "email": "jacob.friis.mathiasen@ks.kk.dk"
+        }
+    ],
+    "require": {
+        "simplecomplex/restmini": "^1.0 || dev-develop",
+        "kk-seb/locale": "^1.0 || dev-develop"
+    },
+    "autoload": {
+        "psr-4": {
+            "KkSeb\\Http\\": "src/",
+            "KkSeb\\Http\\Exception\\": "src/Exception/"
+        }
+    }
+}
