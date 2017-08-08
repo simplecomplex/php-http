@@ -7,7 +7,6 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
-use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\Exception\ConfigurationException;
 use SimpleComplex\RestMini\Client as RestMiniClient;
 
@@ -41,6 +40,11 @@ class HttpRequest
     public $code = 0;
 
     /**
+     * @var bool
+     */
+    public $aborted = false;
+
+    /**
      * Executes HTTP request.
      *
      * Constructor arguments are not checked here; must be checked by caller
@@ -66,9 +70,60 @@ class HttpRequest
         $this->options = $options;
         $this->parameters = $parameters;
 
-
         // Filter non-RestMini Client properties off.
-        // Copy.
-        $client_options = $this->options;
+        $client_options = array_intersect_assoc(
+            $this->options,
+            array_fill_keys(RestMiniClient::OPTIONS_SUPPORTED, true)
+        );
+        // Remove constructor args.
+        $base_url = $client_options['base_url'];
+        $endpoint_path = $client_options['endpoint_path'];
+        unset($client_options['base_url'], $client_options['endpoint_path']);
+
+        $client = new RestMiniClient($base_url, $endpoint_path, $client_options);
+
+        // Check for RestMini Client initialisation error.
+        $client_error = $client->error();
+        if ($client_error) {
+            $error_name = $client_error['name'];
+            switch ($error_name) {
+                case 'server_arg_empty':
+                case 'protocol_not_supported':
+                case 'option_not_supported':
+                case 'option_value_missing':
+                case 'option_value_empty':
+                case 'option_value_invalid':
+                    $this->aborted = true;
+                    $this->code = 7913; // @todo
+                    // Do log even though RestMini Client also logs (as error),
+                    // because we want a trace.
+                    // And these errors are unlikely but severe.
+                    HttpClient::logException(
+                        new ConfigurationException(
+                            'HttpRequest abort, underlying client ' . get_class($client) . ' reports'
+                            . ' configuration error code[' . $client_error['code'] . '] name[' . $error_name
+                            . '] message[' . $client_error['message'] . '].',
+                            $this->code
+                        ),
+                        $this->options
+                    );
+                    break;
+                default:
+            }
+        }
+    }
+
+    /**
+     * Convenience method for HttpRequest.
+     *
+     * @param int $code
+     *
+     * @return $this|HttpRequest
+     */
+    public function aborted(int $code)
+    {
+        $this->aborted = true;
+        $this->code = $code;
+        return $this;
     }
 }
