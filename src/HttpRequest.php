@@ -23,7 +23,7 @@ class HttpRequest
     /**
      * @var array
      */
-    public $ids;
+    public $properties;
 
     /**
      * @var array
@@ -36,12 +36,18 @@ class HttpRequest
     public $parameters;
 
     /**
-     * Instantiates and executes HTTP request.
+     * @var int
+     */
+    public $code = 0;
+
+    /**
+     * Executes HTTP request.
      *
      * Constructor arguments are not checked here; must be checked by caller
      * (HttpClient).
      *
-     * @param array $ids {
+     * @param array $properties {
+     *      @var string $appTitle
      *      @var string $provider
      *      @var string $service
      *      @var string $endpoint
@@ -54,10 +60,15 @@ class HttpRequest
      *      @var array|object|string $body  Optional.
      * }
      */
-    public function __construct(array $ids, array $options, array $parameters)
+    public function __construct(array $properties, array $options, array $parameters)
     {
-        $this->ids = $ids;
+        $this->properties = $properties;
         $this->options = $options;
         $this->parameters = $parameters;
+
+
+        // Filter non-RestMini Client properties off.
+        // Copy.
+        $client_options = $this->options;
     }
 }

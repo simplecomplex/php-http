@@ -10,6 +10,7 @@
         }
     ],
     "require": {
+        "simplecomplex/inspect": "^1.0 || dev-develop",
         "simplecomplex/restmini": "^1.0 || dev-develop",
         "simplecomplex/utils": "^1.0 || dev-develop",
         "kk-seb/locale": "^1.0 || dev-develop",
