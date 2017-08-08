@@ -11,7 +11,7 @@ namespace KkSeb\Http;
  *
  * @package KkSeb\Http
  */
-class ResponseBody
+class HttpResponseBody
 {
     /**
      * The actual status to be emitted to frontend client.
