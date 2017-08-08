@@ -63,6 +63,11 @@ class HttpClient
      */
     public function __construct(string $provider, string $service, string $appTitle = '')
     {
+        // @todo: move the whole body into request(), and then that should return HttpErrorResponse on failure.
+        // @todo: otherwise we can't produce user-friendly error messages for argument and configuration errors.
+        // @todo: check in request() if 'fully initialized'.
+
+
         $container = Dependency::container();
         /** @var \KkSeb\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
