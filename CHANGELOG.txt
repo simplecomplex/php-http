@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-08-08
+--------------------------
+- Client, response and response body done. Request error handling missing.
+
 KkSeb/Http 1.x, 2017-08-04
-----------------------------
+--------------------------
 - Initial.

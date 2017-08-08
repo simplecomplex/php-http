@@ -14,22 +14,23 @@ namespace KkSeb\Http;
 class HttpResponseBody
 {
     /**
-     * The actual status to be emitted to frontend client.
+     * The real status.
      *
      * Allows making response body (like error message) available for frontend,
-     * when error; send status header 200, and set this to 500/502/504 etc.
+     * when error.
+     * Send status header 200, set this (response body) status to 500/502/504.
      *
      * Angular HttpClient ignores response body if header status isn't 200/201.
-     * And Angular promise fails if null body.
+     * And Angular 'promise' fails if null body.
      *
      * @var int
      */
-    public $status = 200;
+    public $status = 500;
 
     /**
      * @var bool
      */
-    public $success = true;
+    public $success = false;
 
     /**
      * @var mixed|null
@@ -49,18 +50,4 @@ class HttpResponseBody
      * @var int|null
      */
     public $code;
-
-
-
-    const MESSAGE_ERROR = '';
-
-    /**
-     * @param string $message
-     */
-    public function setMessage(string $message) /*:void*/
-    {
-        if (defined('static::' . $message)) {
-
-        }
-    }
 }

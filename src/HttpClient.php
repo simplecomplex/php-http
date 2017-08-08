@@ -20,6 +20,11 @@ use SimpleComplex\RestMini\Client as RestMiniClient;
 class HttpClient
 {
     /**
+     * @var string
+     */
+    const LOG_TYPE = 'http-client';
+
+    /**
      * Settings/options required, and their (scalar) types.
      *
      * If type is string then value can't be empty string.
@@ -87,8 +92,31 @@ class HttpClient
     protected $exception;
 
     /**
+     * @var string
+     */
+    protected $logType;
+
+    /**
      * HTTP client, configured for requesting any endpoint+method
      * of a service.
+     *
+     * @code
+     * $client = new HttpClient('provider', 'service', 'Some app');
+     * $request = (new HttpClient('provider', 'service', 'Some app'))
+     *     ->request('endpoint', 'METHOD', [
+     *         'path' => ['path',],
+     *         'query' => ['what' => 'ever',],
+     *         'body' => ['what' => 'ever',]
+     *     ], [
+     *         // HttpClient option.
+     *         'err_on_resource_not_found' => true,
+     *         // Underlying RestMini client option.
+     *         'request_timeout' => 60,
+     *     ]);
+     * $response = (new HttpClient('provider', 'service', 'Some app'))
+     *     ->request('endpoint', 'METHOD', [])
+     *     ->response;
+     * @endcode
      *
      * @param string $provider
      *      Lispcased, some-provider.
@@ -146,7 +174,7 @@ class HttpClient
      *      Lisp-cased, some-endpoint.
      * @param string $method
      *      HEAD|GET|POST|PUT|DELETE.
-     * @param array $parameters {
+     * @param array $arguments {
      *      @var array $path  Optional.
      *      @var array $query  Optional.
      *      @var array|object|string $body  Optional.
@@ -163,7 +191,7 @@ class HttpClient
      * @throws \Throwable
      *      Propagated; unlikely errors normally detected earlier.
      */
-    public function request(string $endpoint, string $method, array $parameters, array $options = []) : HttpRequest
+    public function request(string $endpoint, string $method, array $arguments, array $options = []) : HttpRequest
     {
         // Do not throw exception here; return HttpRequest->aborted instead.
 
@@ -210,13 +238,13 @@ class HttpClient
             ));
             return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
         }
-        // Check that parameters by type are nested.
-        if ($parameters) {
-            $keys = array_keys($parameters);
+        // Check that arguments by type are nested.
+        if ($arguments) {
+            $keys = array_keys($arguments);
             if (($diff = array_diff($keys, ['path', 'query', 'body']))) {
                 static::logException($this->exception = new \InvalidArgumentException(
-                    'HttpClient abort, request() arg parameters keys[' . join(', ', $keys)
-                    . '] exceed valid keys[path, query, body], perhaps forgot to nest parameters.',
+                    'HttpClient abort, request() arg arguments keys[' . join(', ', $keys)
+                    . '] exceed valid keys[path, query, body], perhaps forgot to nest arguments.',
                     7913 // @todo
                 ));
                 return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
@@ -224,6 +252,9 @@ class HttpClient
         }
 
         $options = array_replace_recursive($this->settings, $conf_endpoint, $conf_method, $options);
+
+        $this->logType = !empty($options['log_type']) ? $options['log_type'] : static::LOG_TYPE;
+
         // Secure that required options are available.
         foreach (static::OPTIONS_REQUIRED as $name => $type) {
             if (
@@ -243,13 +274,16 @@ class HttpClient
                         7913 // @todo
                     ),
                     // Dump settings/options.
-                    $options
+                    [
+                        'settings+options' => $options,
+                    ],
+                    $this->logType
                 );
                 return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
             }
         }
 
-        return new HttpRequest($properties, $options, $parameters);
+        return new HttpRequest($properties, $options, $arguments);
     }
 
     /**
@@ -298,12 +332,15 @@ class HttpClient
      *
      * @param \Throwable $xcptn
      * @param array $variables
+     * @param string $logType
      *
      * @return void
      */
-    public static function logException(\Throwable $xcptn, array $variables = []) /*: void*/
+    public static function logException(\Throwable $xcptn, array $variables = [], $logType = '') /*: void*/
     {
         $code = $xcptn->getCode();
+        $type = $logType ? $logType : static::LOG_TYPE;
+
         $container = Dependency::container();
         /** @var \SimpleComplex\Inspect\Inspect $inspect */
         $inspect = $container->get('inspector');
@@ -312,6 +349,8 @@ class HttpClient
             . "\n" . $inspect->trace($xcptn)
             . ($variables ? '' : ("\n" . $inspect->variable($variables))),
             [
+                'type' => $type,
+                'subType' => $type,
                 'code' => $code,
                 'exception' => $xcptn,
             ]
