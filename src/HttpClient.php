@@ -9,8 +9,8 @@ namespace KkSeb\Http;
 
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
-use SimpleComplex\Utils\Exception\ConfigurationException;
 use SimpleComplex\RestMini\Client as RestMiniClient;
+use KkSeb\Http\Exception\HttpConfigurationException;
 
 /**
  * Class HttpClient
@@ -82,19 +82,24 @@ class HttpClient
     public $appTitle;
 
     /**
+     * @var string
+     */
+    public $operation;
+
+    /**
      * @var \KkSeb\Config\IniSectionedConfig
      */
     protected $config;
 
     /**
-     * @var \Throwable|null
+     * @var HttpLogger
      */
-    protected $exception;
+    protected $httpLogger;
 
     /**
-     * @var string
+     * @var \Throwable|null
      */
-    protected $logType;
+    protected $initError;
 
     /**
      * HTTP client, configured for requesting any endpoint+method
@@ -125,7 +130,7 @@ class HttpClient
      * @param string $appTitle
      *      Default: localeText http:app-title.
      *
-     * @uses ConfigurationException
+     * @uses HttpConfigurationException
      *      Un-configured provider or service.
      * @throws \Throwable
      *      Propagated; unlikely errors normally detected earlier.
@@ -138,26 +143,41 @@ class HttpClient
         $this->provider = $provider;
         $this->service = $service;
 
+        $this->operation = '[' . $provider . '][' . $service . ']';
+
         $container = Dependency::container();
         /** @var \KkSeb\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
 
         // Config section: http-provider_kki.
         if (!($conf_provider = $this->config->get('http-provider_' . $provider, '*'))) {
-            static::logException($this->exception = new ConfigurationException(
+            $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg provider[' . $provider . '] global config section['
                 . 'http-provider_' . $provider . '] is not configured.',
                 7913 // @todo
-            ));
+            );
+        } elseif (!empty($conf_provider['cacheable'])) {
+            $this->initError = new HttpConfigurationException(
+                'HttpClient abort, truthy config setting \'cacheable\' type['
+                . Utils::getType($conf_provider['cacheable']) . '] is illegal on provider level.',
+                7913 // @todo
+            );
         }
         // Config section: http-service_kki_seb-personale.
         elseif (!($conf_service = $this->config->get('http-service_' . $provider . '_' . $service, '*'))) {
-            static::logException($this->exception = new ConfigurationException(
+            $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg service[' . $provider . '] global config section['
                 . 'http-service_' . $provider . '_' . $service . '] is not configured.',
                 7913 // @todo
-            ));
+            );
+        } elseif (!empty($conf_service['cacheable'])) {
+            $this->initError = new HttpConfigurationException(
+                'HttpClient abort, truthy config setting \'cacheable\' type['
+                . Utils::getType($conf_service['cacheable']) . '] is illegal on service level.',
+                7913 // @todo
+            );
         } else {
+            // A-OK, so far.
             $this->settings = array_replace_recursive($conf_provider, $conf_service);
         }
 
@@ -183,7 +203,7 @@ class HttpClient
      *
      * @return HttpRequest
      *
-     * @uses ConfigurationException
+     * @uses HttpConfigurationException
      *      Un-configured endpoint or method.
      * @uses \InvalidArgumentException
      *      Arg method not supported.
@@ -195,65 +215,77 @@ class HttpClient
     {
         // Do not throw exception here; return HttpRequest->aborted instead.
 
+        $this->operation .= '[' . $endpoint . '][' . $method . ']';
+        $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
         $properties = [
-            'appTitle' => $this->appTitle,
             'provider' => $this->provider,
             'service' => $this->service,
             'endpoint' => $endpoint,
             'method' => $method,
+            'appTitle' => $this->appTitle,
+            'httpLogger' => $this->httpLogger,
         ];
+
         // Erred in constructor.
-        if ($this->exception) {
-            return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
+        if ($this->initError) {
+            $this->httpLogger->log(LOG_ERR, 'Http init', $this->initError);
+            return (new HttpRequest($properties, [], []))->aborted($this->initError->getCode());
         }
+
         // HTTP method supported.
         if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
-            static::logException($this->exception = new \InvalidArgumentException(
-                'HttpClient abort, request() arg method[' . $method . '] is not among supported methods '
+            $code = 7913; // @todo
+            $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
+                'client abort, request() arg method[' . $method . '] is not among supported methods '
                 . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
-                7913 // @todo
+                $code
             ));
-            return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
+            return (new HttpRequest($properties, [], []))->aborted($code);
         }
         // Config section: http-service_kki_seb-personale_cpr.
         if (!($conf_endpoint = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint, '*')
         )) {
-            static::logException($this->exception = new ConfigurationException(
-                'HttpClient abort, request() arg endpoint[' . $endpoint . '] global config section['
+            $code = 7913; // @todo
+            $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
+                'client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
-                7913 // @todo
+                $code
             ));
-            return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
+            return (new HttpRequest($properties, [], []))->aborted($code);
         }
         // Config section: http-service_kki_seb-personale_cpr_GET.
         if (!($conf_method = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method, '*')
         )) {
-            static::logException($this->exception = new ConfigurationException(
-                'HttpClient abort, request() arg endpoint[' . $endpoint . '] global config section['
+            $code = 7913; // @todo
+            $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
+                'client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method
                 . '] is not configured.',
-                7913 // @todo
+                $code
             ));
-            return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
+            return (new HttpRequest($properties, [], []))->aborted($code);
         }
         // Check that arguments by type are nested.
         if ($arguments) {
             $keys = array_keys($arguments);
             if (($diff = array_diff($keys, ['path', 'query', 'body']))) {
-                static::logException($this->exception = new \InvalidArgumentException(
-                    'HttpClient abort, request() arg arguments keys[' . join(', ', $keys)
-                    . '] exceed valid keys[path, query, body], perhaps forgot to nest arguments.',
-                    7913 // @todo
+                $code = 7913; // @todo
+                $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
+                    'client abort, request() arg arguments keys[' . join(', ', $keys)
+                    . '] don\'t match valid keys[path, query, body], perhaps forgot to nest arguments.',
+                    $code
                 ));
-                return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
+                return (new HttpRequest($properties, [], []))->aborted($code);
             }
         }
 
         $options = array_replace_recursive($this->settings, $conf_endpoint, $conf_method, $options);
 
-        $this->logType = !empty($options['log_type']) ? $options['log_type'] : static::LOG_TYPE;
+        if (!empty($options['log_type'])) {
+            $this->httpLogger->type = $options['log_type'];
+        }
 
         // Secure that required options are available.
         foreach (static::OPTIONS_REQUIRED as $name => $type) {
@@ -268,18 +300,19 @@ class HttpClient
                 } else {
                     $msg = 'is empty';
                 }
-                static::logException(
-                    $this->exception = new ConfigurationException(
-                        'HttpClient abort, settings+options \'' . $name . '\' ' . $msg . '.',
-                        7913 // @todo
+                $code = 7913; // @todo
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http init',
+                    new HttpConfigurationException(
+                        'client abort, settings+options \'' . $name . '\' ' . $msg . '.',
+                        $code
                     ),
-                    // Dump settings/options.
                     [
                         'settings+options' => $options,
-                    ],
-                    $this->logType
+                    ]
                 );
-                return (new HttpRequest($properties, [], []))->aborted($this->exception->getCode());
+                return (new HttpRequest($properties, [], []))->aborted($code);
             }
         }
 
@@ -325,35 +358,5 @@ class HttpClient
             }
         }
         return $codes;
-    }
-
-    /**
-     * Logs exception + trace.
-     *
-     * @param \Throwable $xcptn
-     * @param array $variables
-     * @param string $logType
-     *
-     * @return void
-     */
-    public static function logException(\Throwable $xcptn, array $variables = [], $logType = '') /*: void*/
-    {
-        $code = $xcptn->getCode();
-        $type = $logType ? $logType : static::LOG_TYPE;
-
-        $container = Dependency::container();
-        /** @var \SimpleComplex\Inspect\Inspect $inspect */
-        $inspect = $container->get('inspector');
-        $container->get('logger')->error(
-            get_class($xcptn) . '(' . $code . '): ' . $xcptn->getMessage()
-            . "\n" . $inspect->trace($xcptn)
-            . ($variables ? '' : ("\n" . $inspect->variable($variables))),
-            [
-                'type' => $type,
-                'subType' => $type,
-                'code' => $code,
-                'exception' => $xcptn,
-            ]
-        );
     }
 }

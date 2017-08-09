@@ -47,4 +47,30 @@ class HttpResponse
         $this->body = $body;
         $this->code = $code;
     }
+
+    /**
+     * @see HttpClient::ERROR_CODES
+     * @see \SimpleComplex\RestMini\Client::ERROR_CODES
+     *
+     * @param string $clientErrorName
+     *      Empty if RestMini Client didn't report an error.
+     * @param bool $fromCache
+     * @param array $requirements {
+     *      @var array $require_response_headers  If set.
+     *      @var bool $err_on_endpoint_not_found  If set.
+     *      @var bool $err_on_resource_not_found  If set.
+     * }
+     *
+     * @return bool
+     */
+    public function evaluate(string $clientErrorName = '', bool $fromCache = false, array $requirements = []) : bool
+    {
+
+        // @todo: define error codes in HttpClient
+        /**
+         * @see HttpClient::ERROR_CODES
+         */
+
+        return false;
+    }
 }
