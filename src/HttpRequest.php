@@ -330,7 +330,7 @@ class HttpRequest
             $this->properties['method'],
             $this->arguments['path'] ?? [],
             $this->arguments['query'] ?? [],
-            $this->arguments['body'] ?? []
+            $this->arguments['body'] ?? null
         );
 
         $client_error = $client->error();

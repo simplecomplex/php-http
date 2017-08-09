@@ -197,7 +197,7 @@ class HttpClient
      * @param array $arguments {
      *      @var array $path  Optional.
      *      @var array $query  Optional.
-     *      @var array|object|string $body  Optional.
+     *      @var mixed $body  Optional.
      * }
      * @param array $options
      *
@@ -242,6 +242,7 @@ class HttpClient
             ));
             return (new HttpRequest($properties, [], []))->aborted($code);
         }
+
         // Config section: http-service_kki_seb-personale_cpr.
         if (!($conf_endpoint = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint, '*')
@@ -267,6 +268,7 @@ class HttpClient
             ));
             return (new HttpRequest($properties, [], []))->aborted($code);
         }
+
         // Check that arguments by type are nested.
         if ($arguments) {
             $keys = array_keys($arguments);
@@ -279,6 +281,8 @@ class HttpClient
                 ));
                 return (new HttpRequest($properties, [], []))->aborted($code);
             }
+            // Don't check that path and query args are array; rely on native
+            // strict argument type check by RestMini Client request() method.
         }
 
         $options = array_replace_recursive($this->settings, $conf_endpoint, $conf_method, $options);
