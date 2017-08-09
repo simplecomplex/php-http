@@ -7,6 +7,9 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use KkSeb\Http\Exception\HttpException;
+use KkSeb\Http\Exception\HttpRuntimeException;
+
 /**
  * Http response.
  *
@@ -52,7 +55,7 @@ class HttpResponse
      * @see HttpClient::ERROR_CODES
      * @see \SimpleComplex\RestMini\Client::ERROR_CODES
      *
-     * @param string $clientErrorName
+     * @param array $error
      *      Empty if RestMini Client didn't report an error.
      * @param bool $fromCache
      * @param array $requirements {
@@ -61,16 +64,37 @@ class HttpResponse
      *      @var bool $err_on_resource_not_found  If set.
      * }
      *
-     * @return bool
+     * @return array
+     *      Buckets 'preface' and 'exception' and/or 'variables'
+     *      if to be logged.
      */
-    public function evaluate(string $clientErrorName = '', bool $fromCache = false, array $requirements = []) : bool
+    public function evaluate(array $error = [], bool $fromCache = false, array $requirements = []) : array
     {
+        // Error name 'request_aborted' is HttpClient, not RestMini Client,
+        // and no loggable exception should be created for that (already logged).
+        if ($error) {
+            if ($error['name'] == 'request_aborted') {
+                // ...
+            } else {
+                // Investigate RestMini Client error.
+            }
+        }
 
         // @todo: define error codes in HttpClient
         /**
          * @see HttpClient::ERROR_CODES
          */
 
-        return false;
+        // Return loggable exception on failure (except if request_aborted).
+
+        return [];
+        // Or
+        /*
+        return [
+            'preface' => 'Http request|response',
+            'exception' => new HttpRuntimeException(),
+            'variables' => [],
+        ];
+        */
     }
 }

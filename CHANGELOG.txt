@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-08-09
+--------------------------
+- New option retry_on_unavailable; 503 Service Unavailable or host not found.
+
 KkSeb/Http 1.x, 2017-08-08
 --------------------------
 - Client, response and response body done. Request error handling missing.

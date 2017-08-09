@@ -55,6 +55,10 @@ class HttpClient
      */
     const ERROR_CODES = [
         'unknown' => 1,
+        'local_configuration' => 1,
+        'local_use' => 1,
+        'local_algo' => 1,
+        'local_default' => 1,
     ];
 
     /**
@@ -154,13 +158,13 @@ class HttpClient
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg provider[' . $provider . '] global config section['
                 . 'http-provider_' . $provider . '] is not configured.',
-                7913 // @todo
+                static::ERROR_CODES['local_configuration']
             );
         } elseif (!empty($conf_provider['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_provider['cacheable']) . '] is illegal on provider level.',
-                7913 // @todo
+                static::ERROR_CODES['local_configuration']
             );
         }
         // Config section: http-service_kki_seb-personale.
@@ -168,13 +172,13 @@ class HttpClient
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg service[' . $provider . '] global config section['
                 . 'http-service_' . $provider . '_' . $service . '] is not configured.',
-                7913 // @todo
+                static::ERROR_CODES['local_configuration']
             );
         } elseif (!empty($conf_service['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_service['cacheable']) . '] is illegal on service level.',
-                7913 // @todo
+                static::ERROR_CODES['local_configuration']
             );
         } else {
             // A-OK, so far.
@@ -234,7 +238,7 @@ class HttpClient
 
         // HTTP method supported.
         if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
-            $code = 7913; // @todo
+            $code = static::ERROR_CODES['local_use'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
                 'client abort, request() arg method[' . $method . '] is not among supported methods '
                 . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
@@ -247,7 +251,7 @@ class HttpClient
         if (!($conf_endpoint = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint, '*')
         )) {
-            $code = 7913; // @todo
+            $code = static::ERROR_CODES['local_configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
@@ -259,7 +263,7 @@ class HttpClient
         if (!($conf_method = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method, '*')
         )) {
-            $code = 7913; // @todo
+            $code = static::ERROR_CODES['local_configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method
@@ -273,7 +277,7 @@ class HttpClient
         if ($arguments) {
             $keys = array_keys($arguments);
             if (($diff = array_diff($keys, ['path', 'query', 'body']))) {
-                $code = 7913; // @todo
+                $code = static::ERROR_CODES['local_use'];
                 $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
                     'client abort, request() arg arguments keys[' . join(', ', $keys)
                     . '] don\'t match valid keys[path, query, body], perhaps forgot to nest arguments.',
@@ -304,7 +308,7 @@ class HttpClient
                 } else {
                     $msg = 'is empty';
                 }
-                $code = 7913; // @todo
+                $code = static::ERROR_CODES['local_configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
                     'Http init',

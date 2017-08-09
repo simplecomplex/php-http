@@ -52,6 +52,8 @@ class HttpRequest
         'debug_dump',
         // bool|array.
         'cacheable',
+        // int; milliseconds.
+        'retry_on_unavailable',
         // array.
         'require_response_headers',
         // bool; 404 + HTML.
@@ -210,17 +212,6 @@ class HttpRequest
             ]);
             unset($cache_broker);
         }
-        if (!empty($options['require_response_headers'])) {
-            // RestMini Client needs 'get_header' option, for this to work.
-            $this->options['get_headers'] = true;
-            $this->responseRequirements['require_response_headers'] = $options['require_response_headers'];
-        }
-        if (!empty($options['err_on_endpoint_not_found'])) {
-            $this->responseRequirements['err_on_endpoint_not_found'] = true;
-        }
-        if (!empty($options['err_on_resource_not_found'])) {
-            $this->responseRequirements['err_on_resource_not_found'] = true;
-        }
 
         // Get cached if exists (and not to be refreshed),
         // but do evaluate it anyway.
@@ -232,10 +223,24 @@ class HttpRequest
                     $this->httpLogger->log(LOG_DEBUG, 'Http cached response ◀', null, $cached_response);
                 }
                 $this->response = $cached_response;
-                $this->response->evaluate('', true, $this->responseRequirements);
+                // Do not evaluate cached response. Presume that
+                // responseRequirements (the only thing possibly worth checking)
+                // are the same as last time.
 
                 return;
             }
+        }
+
+        if (!empty($options['require_response_headers'])) {
+            // RestMini Client needs 'get_header' option, for this to work.
+            $this->options['get_headers'] = true;
+            $this->responseRequirements['require_response_headers'] = $options['require_response_headers'];
+        }
+        if (!empty($options['err_on_endpoint_not_found'])) {
+            $this->responseRequirements['err_on_endpoint_not_found'] = true;
+        }
+        if (!empty($options['err_on_resource_not_found'])) {
+            $this->responseRequirements['err_on_resource_not_found'] = true;
         }
 
         $this->execute();
@@ -276,7 +281,7 @@ class HttpRequest
                 case 'option_value_empty':
                 case 'option_value_invalid':
                     $this->aborted = true;
-                    $this->code = 7913; // @todo
+                    $this->code = HttpClient::ERROR_CODES['local_configuration'];
                     // Do log even though RestMini Client also logs (as error),
                     // because we want a trace.
                     // And these errors are unlikely but severe.
@@ -296,7 +301,7 @@ class HttpRequest
                     return;
                 default:
                     $this->aborted = true;
-                    $this->code = 7913; // @todo
+                    $this->code = HttpClient::ERROR_CODES['local_default'];
                     // Do log even though RestMini Client also logs (as error),
                     // because we want a trace.
                     // And these errors are unlikely but severe.
@@ -325,6 +330,7 @@ class HttpRequest
             ]);
         }
 
+        $data = null;
         // Init/send request.
         $client->request(
             $this->properties['method'],
@@ -332,9 +338,28 @@ class HttpRequest
             $this->arguments['query'] ?? [],
             $this->arguments['body'] ?? null
         );
-
         $client_error = $client->error();
-        $data = null;
+
+        // Retry on unavailable.
+        if (
+            $client_error && !empty($this->options['retry_on_unavailable'])
+            && ($client->status() == 503
+                || $client_error['name'] == 'host_not_found' || $client_error['name'] == 'connection_failed'
+            )
+        ) {
+            usleep(1000 * $this->options['retry_on_unavailable']);
+            // Re-send; RestMini Client resets itself at secondary request().
+            $client->request(
+                $this->properties['method'],
+                $this->arguments['path'] ?? [],
+                $this->arguments['query'] ?? [],
+                $this->arguments['body'] ?? null
+            );
+            $client_error = $client->error();
+        }
+
+        $response_evaluation = null;
+
         if (!$client_error) {
             $data = $client->result();
             $client_error = $client->error();
@@ -348,24 +373,34 @@ class HttpRequest
                     !empty($this->options['get_headers']) ? $client->headers() : [],
                     $body
                 );
+                $response_evaluation = $this->response->evaluate([], false, $this->responseRequirements);
             }
         }
         if ($client_error) {
             // Request (or response body parsing) failed.
             $status = $client->status();
-            // Do log even though RestMini Client also logs (as warning),
-            // because we want a trace.
-            // But don't log options here; RestMini Client does that.
-            $this->code = 7913; // @todo
-            $this->httpLogger->log(
-                LOG_ERR,
-                'Http request',
-                new HttpRequestException(
-                    'failure, error code[' . $client_error['code'] . '] name[' . $client_error['name']
-                    . '] message[' . $client_error['message'] . '].',
-                    $this->code
-                )
-            );
+            // Don't log if RestMini Client error 'response_error', because that
+            // is simply status >= 500, and HttpResponse::evaluate() do those.
+            if ($client_error['name'] != 'response_error') {
+
+                // @todo: do not log trace here - let HttpResponse::evaluate produce it.
+
+                // Do log even though RestMini Client also logs (as warning),
+                // because we want a trace.
+                // But don't log options here; RestMini Client does that.
+                $this->code = 7913; // @todo
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http request',
+                    new HttpRequestException(
+                        'failure, error code[' . $client_error['code'] . '] name[' . $client_error['name']
+                        . '] message[' . $client_error['message'] . '].',
+                        $this->code
+                    )
+                );
+
+
+            }
             // Status will be zero it RestMini Client failed to init connection.
             if (!$status) {
                 $status = 500;
@@ -378,11 +413,12 @@ class HttpRequest
                 !empty($this->options['get_headers']) ? $client->headers() : [],
                 $body
             );
+            $response_evaluation = $this->response->evaluate($client_error);
         }
 
         // Paranoid.
         if (!$this->response) {
-            $this->code = 7913; // @todo
+            $this->code = HttpClient::ERROR_CODES['local_algo'];
             // Do log even though RestMini Client also logs (as error),
             // because we want a trace.
             // And these errors are unlikely but severe.
@@ -391,15 +427,29 @@ class HttpRequest
                 $this->code
             ));
             $this->response = new HttpResponse(500, [], new HttpResponseBody(), $this->code);
-            $this->response->evaluate();
+            $response_evaluation = $this->response->evaluate();
+        }
+
+        if ($response_evaluation) {
+            $this->httpLogger->log(
+                LOG_ERR,
+                $response_evaluation['preface'],
+                $response_evaluation['exception'] ?? null,
+                $response_evaluation['variables'] ?? []
+            );
         }
     }
 
     protected function setAbortedResponse()
     {
-        // @todo: uncessary method; just the next lines of code where the methods is called.
+        // @todo: failry uncessary method; just the next lines of code where the methods is called.
         $this->response = new HttpResponse(500, [], new HttpResponseBody(), $this->code);
-        $this->response->evaluate();
+        // Do not log aborted once again.
+        $this->response->evaluate(
+            [
+                'name' => 'request_aborted'
+            ]
+        );
     }
 
     /**
