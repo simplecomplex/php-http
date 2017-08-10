@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use KkSeb\Http\Exception\HttpResponseException;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileList;
@@ -79,7 +80,7 @@ class HttpRequest
     // Public members.----------------------------------------------------------
 
     /**
-     * @var HttpResponse
+     * @var \KkSeb\Http\HttpResponse
      */
     public $response;
 
@@ -264,6 +265,9 @@ class HttpRequest
 
         $client = new RestMiniClient($base_url, $endpoint_path, $client_options);
 
+        // Set RestMini Client log type, for evaluateResponse().
+        $this->properties['clientLogType'] = $client->logType();
+
         // Check for RestMini Client initialisation error.
         $client_error = $client->error();
         if ($client_error) {
@@ -360,6 +364,7 @@ class HttpRequest
                 // Apparant success.
                 $status = $client->status();
                 $body = new HttpResponseBody();
+                $body->success = true;
                 $body->status = $status;
                 $body->data = $data;
                 // Do evaluate for:
@@ -372,7 +377,11 @@ class HttpRequest
                         $status,
                         !empty($this->options['get_headers']) ? $client->headers() : [],
                         $body
-                    )
+                    ),
+                    [],
+                    // We do not need the info when RestMini Client reports error,
+                    // because then it logs (warning) all by itself.
+                    $client->info()
                 );
                 return;
             }
@@ -407,20 +416,26 @@ class HttpRequest
                 'algo error in this method, did not set response instance var at all.',
                 $this->code
             ));
-            $this->response = $this->evaluateResponse(
-                new HttpResponse(500, [], new HttpResponseBody(), $this->code)
-            );
+            $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
         }
     }
 
     /**
+     * @todo: write locale text error messages in accordance with HttpCLient::ERROR_CODES
+     * @see \KkSeb\Http\HttpCLient::ERROR_CODES.
+     */
+
+    /**
      * Evaluates response object and modifies it if response status
-     * or arg error suggests that the request failed or the response is faulty.
+     * or arg error suggests that i. request failed or ii. response is faulty.
      *
-     * Sets the responses's HttpResponseBody->message to safe and user-friendly
-     * message if request/response failure.
+     * Sets the responses's HttpResponseBody->status to false,
+     * and HttpResponseBody->message to safe and user-friendly message,
+     * if request/response evaluates to failure.
      *
+     * @see RestMiniClient::info()
      * @see RestMiniClient::ERROR_CODES
+     * @see HttpClient::ERROR_CODES
      *
      * @param HttpResponse $response
      * @param array $error {
@@ -429,40 +444,179 @@ class HttpRequest
      *      @var string $message  If set.
      * }
      *      RestMini Client error, if any.
-     * @param bool $fromCache
+     * @param array $info
+     *      Optional RestMini Client info. Only needed when apparantly
+     *      successful response.
      *
-     * @return HttpResponse
+     * @return \KkSeb\Http\HttpResponse
      */
-    protected function evaluateResponse(
-        HttpResponse $response, array $error = [], bool $fromCache = false
-    ) : HttpResponse
-    {
-        // 'code' may not be set if aborted.
+    protected function evaluateResponse(HttpResponse $response, array $error = [], array $info = []) : HttpResponse {
+        // Refer the inner HttpResponseBody.
+        $body = $response->body;
+
         if ($this->aborted) {
-            $response->code = $this->code;
+            $response->status = $body->status = 500;
+            $body->code = $this->code;
+            $code_names = array_flip(HttpClient::ERROR_CODES);
+            /** @var \SimpleComplex\Locale\AbstractLocale $locale */
+            $locale = Dependency::container()->get('locale');
+            $body->message = $locale->text('http:error_' . str_replace('_', '-', $code_names[$this->code]));
+
+            return $response;
         }
 
-
+        // Copy original status, we may overwrite it.
+        $original_status = $response->status;
+        // Investigate RestMini Client error.
         if ($error) {
-            if ($error['name'] == 'request_aborted') {
-                // ...
-            } else {
-                // Investigate RestMini Client error.
+            // Listed in expected order of expected frequency.
+            switch ($error['name']) {
+                case 'response_error':
+                    // RestMini Client flags that status >=500.
+                    switch ($original_status) {
+                        case 500:
+                            // Set to Bad Gateway; not our fault.
+                            $response->status = $body->status = 502;
+                            $this->code = HttpClient::ERROR_CODES['remote_default'];
+                            break;
+                        case 502:
+                            // Bad Gateway; keep status.
+                            $this->code = HttpClient::ERROR_CODES['remote_propagated'];
+                            break;
+                        case 503:
+                            // Service unavailable.
+                            // Keep status, frontend client may wish to retry later.
+                            $this->code = HttpClient::ERROR_CODES['service_unavailable'];
+                            break;
+                        case 504:
+                            // Request timeout; keep status.
+                            $this->code = HttpClient::ERROR_CODES['timeout_propagated'];
+                            break;
+                        default:
+                            // Unexpecteds; set to Bad Gateway, not our fault.
+                            // But keep the the original status on $body->status.
+                            $response->status = 502;
+                            $this->code = HttpClient::ERROR_CODES['malign_status_unexpected'];
+                    }
+                    break;
+                case 'request_timed_out':
+                    // 504 Gateway Timeout.
+                    $response->status = $body->status = 504;
+                    $this->code = HttpClient::ERROR_CODES['timeout'];
+                    break;
+                case 'host_not_found':
+                case 'connection_failed':
+                    // 502 Bad Gateway.
+                    // Perhaps upon retry (option: 'retry_on_unavailable').
+                    $response->status = $body->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['host_unavailable'];
+                    break;
+                case 'response_false':
+                    // 502 Bad Gateway.
+                    // RestMini Client's fallback cURL error.
+                    $response->status = $body->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['request_default'];
+                    break;
+                case 'content_type_mismatch':
+                    // Probably HTML body.
+                    $response->status = $body->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['response_default'];
+                    break;
+                case 'response_parse':
+                    // Bad JSON.
+                    $response->status = $body->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['response_format'];
+                    break;
+                case 'too_many_redirects':
+                    // 502 Bad Gateway.
+                    $response->status = $body->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['too_many_redirects'];
+                    break;
+                case 'init_connection':
+                case 'request_options':
+                    // Unexpected cURL related.
+                    $response->status = $body->status = 500;
+                    $this->code = HttpClient::ERROR_CODES['local_default'];
+                    break;
+                case 'url_malformed':
+                    // Apparantly RestMini Client produced a bad URL.
+                    $response->status = $body->status = 500;
+                    $this->code = HttpClient::ERROR_CODES['local_configuration'];
+                    break;
+                default:
+                    // Perhaps an SSL error. Probably our fault.
+                    $response->status = $body->status = 500;
+                    $this->code = HttpClient::ERROR_CODES['unknown'];
+            }
+            // Set body 'code'.
+            $body->code = $this->code;
+        }
+        else {
+            // Every status but 200|201|204|304|404 is considered malign.
+            switch ($original_status) {
+                case 200:
+                case 201:
+                case 202: // Accepted.
+                    // Swell.
+                    break;
+                case 204: // No Content.
+                    if (!empty($this->options['err_on_resource_not_found'])) {
+                        // Keep status; flag failure on response body.
+                        $body->success = false;
+                        $this->code = HttpClient::ERROR_CODES['resource_not_found'];
+                    }
+                    break;
+                case 304: // Not Modified.
+                    // Swell.
+                    break;
+                case 404:
+                    if (
+                        !empty($this->options['err_on_endpoint_not_found'])
+                        && stripos($info['content_type'], 'JSON') === false
+                    ) {
+                        // Keep status; flag failure on response body.
+                        $body->success = false;
+                        $this->code = HttpClient::ERROR_CODES['endpoint_not_found'];
+                    } elseif (!empty($this->options['err_on_resource_not_found'])) {
+                        // Keep status; flag failure on response body.
+                        $body->success = false;
+                        $this->code = HttpClient::ERROR_CODES['resource_not_found'];
+                    }
+                    break;
+                default:
+                    // Any other status is considered malign; though not as malign
+                    // as unsupported 5XX status.
+                    $body->success = false;
+                    // Unexpecteds; set to Bad Gateway, not our fault.
+                    // But keep the the original status on $body->status.
+                    $response->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['benign_status_unexpected'];
             }
         }
-        /*
-        if (!empty($options['require_response_headers'])) {
-            // RestMini Client needs 'get_header' option, for this to work.
-            $this->options['get_headers'] = true;
-            $this->responseRequirements['require_response_headers'] = $options['require_response_headers'];
+        // Handle error.
+        if ($this->code) {
+            // Log.
+            $code_names = array_flip(HttpClient::ERROR_CODES);
+            $this->httpLogger->log(
+                LOG_ERR,
+                'Http response',
+                new HttpResponseException(
+                    'Response evaluates to HttpClient error[' . $code_names[$this->code] . '].',
+                    $this->code
+                ),
+                [
+                    'final status' => $response->status,
+                    'original status' => $original_status,
+                    'info' => $info ? $info :
+                        'see previous warning, type or subtype \'' . $this->properties['clientLogType'] . '\',',
+                    'response' => $response,
+                ]
+            );
+            // Set body 'message'.
+            /** @var \SimpleComplex\Locale\AbstractLocale $locale */
+            $locale = Dependency::container()->get('locale');
+            $body->message = $locale->text('http:error_' . str_replace('_', '-', $code_names[$this->code]));
         }
-        if (!empty($options['err_on_endpoint_not_found'])) {
-            $this->responseRequirements['err_on_endpoint_not_found'] = true;
-        }
-        if (!empty($options['err_on_resource_not_found'])) {
-            $this->responseRequirements['err_on_resource_not_found'] = true;
-        }
-         */
 
         return $response;
     }
@@ -484,7 +638,7 @@ class HttpRequest
      *      Filename will be
      *      'http[provider][server][endpoint][METHOD].validation-rule-set.json'.
      *
-     * @return HttpResponse
+     * @return \KkSeb\Http\HttpResponse
      */
     public function validateResponse($ruleSet = null, string $ruleSetJsonPath = '') : HttpResponse
     {
@@ -561,6 +715,6 @@ class HttpRequest
 
         }
 
-        return new HttpResponse(500, [], new HttpResponseBody(), $this->code);
+        return new HttpResponse(500, [], new HttpResponseBody());
     }
 }

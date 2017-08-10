@@ -27,26 +27,19 @@ class HttpResponse
     public $headers = [];
 
     /**
-     * @var HttpResponseBody
+     * @var \KkSeb\Http\HttpResponseBody
      */
     public $body;
-
-    /**
-     * @var int
-     */
-    public $code = 0;
 
     /**
      * @param int $status
      * @param array $headers
      * @param HttpResponseBody $body
-     * @param int $code
      */
-    public function __construct(int $status, array $headers, HttpResponseBody $body, int $code = 0)
+    public function __construct(int $status, array $headers, HttpResponseBody $body)
     {
         $this->status = $status;
         $this->headers = $headers;
         $this->body = $body;
-        $this->code = $code;
     }
 }

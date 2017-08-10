@@ -19,9 +19,9 @@ use KkSeb\Http\Exception\HttpConfigurationException;
  * And use that HttpResponseBody's 'message' as safe and user-friendly error
  * message to user.
  *
- * @see HttpResponse::status
- * @see HttpResponseBody::success
- * @see HttpResponseBody::message
+ * @see \KkSeb\Http\HttpResponse::status
+ * @see \KkSeb\Http\HttpResponseBody::success
+ * @see \KkSeb\Http\HttpResponseBody::message
  *
  * @package KkSeb\Http
  */
@@ -47,11 +47,11 @@ class HttpClient
     ];
 
     /**
-     * Range is this +999.
+     * Range is this +99.
      *
      * @var int
      */
-    const ERROR_CODE_OFFSET = 2000;
+    const ERROR_CODE_OFFSET = 1900;
 
     /**
      * Actual numeric values may be affected by non-zero ERROR_CODE_OFFSET
@@ -63,11 +63,56 @@ class HttpClient
      */
     const ERROR_CODES = [
         'unknown' => 1,
-        'local_configuration' => 1,
-        'local_use' => 1,
-        'local_algo' => 1,
-        'local_default' => 1,
+
+        'local_default' => 10,
+        'local_configuration' => 11,
+        'local_use' => 12,
+        'local_algo' => 13,
+
+        'host_unavailable' => 20,
+        'service_unavailable' => 21,
+        'too_many_redirects' => 22,
+        // cURL 504.
+        'timeout' => 30,
+        // Status 504.
+        'timeout_propagated' => 31,
+        // cURL 500 (RestMini Client 'response_false').
+        'request_default' => 40,
+        // Status 500.
+        'remote_default' => 50,
+        // Remote says 502 Bad Gateway.
+        'remote_propagated' => 51,
+
+        'malign_status_unexpected' => 59,
+
+        'endpoint_not_found' => 60,
+        'resource_not_found' => 61,
+        // 400 Bad Request, 412 Precondition Failed.
+        'remote_validation' => 70,
+        // Content type mismatch.
+        'response_default' => 80,
+        'benign_status_unexpected' => 89,
+        // Parse error.
+        'response_format' => 81,
+
+        'response_validation' => 90,
     ];
+
+    /*
+; 404 + Content-Type JSON: no such resource (object).
+error_resource-not-found = %app-title fejlede fordi en service svarede at et objekt ikke findes.
+; 404 + Content-Type HTML: no such endpoint.
+error_endpoint-not-found = %app-title fejlede fordi et service slutpunkt ikke findes.
+; 400, 412 service validation failure.
+error_remote-validation = %app-title fejlede fordi et argument i et service-kald var forkert.
+; 502 Bad Gateway.
+error_remote-propagated = %app-title fejlede fordi en service's underliggende system fejler.
+; 500 and likewise.
+error_remote-default = %app-title fejlede pga. en fejl i svaret fra en service.
+;; Response structure/content errors.-------------------------------------------
+; Response body validation failure.
+error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
+     */
 
     /**
      * @var string
@@ -210,7 +255,7 @@ class HttpClient
      * }
      * @param array $options
      *
-     * @return HttpResponse
+     * @return \KkSeb\Http\HttpResponse
      *
      * @uses HttpConfigurationException
      *      Un-configured endpoint or method.

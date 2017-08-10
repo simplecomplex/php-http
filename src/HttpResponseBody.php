@@ -8,17 +8,18 @@ declare(strict_types=1);
 namespace KkSeb\Http;
 
 /**
+ * Http response body.
  *
  * @package KkSeb\Http
  */
 class HttpResponseBody
 {
     /**
-     * The real status.
+     * The actual status.
      *
      * Allows making response body (like error message) available for frontend,
-     * when error.
-     * Send status header 200, set this (response body) status to 500/502/504.
+     * when error. Send status header 200, set this (response body) status
+     * to 500/502/504.
      *
      * Angular HttpClient ignores response body if header status isn't 200/201,
      * thus the 'message' won't be available if sending non-200/201 status.
