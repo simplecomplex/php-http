@@ -13,7 +13,15 @@ use SimpleComplex\RestMini\Client as RestMiniClient;
 use KkSeb\Http\Exception\HttpConfigurationException;
 
 /**
- * Class HttpClient
+ * Methods of HttpClient and HttpRequest throw no exceptions.
+ * Instead use the 'success' attribute of request()'s returned HttpResponse's
+ * HttpResponseBody.
+ * And use that HttpResponseBody's 'message' as safe and user-friendly error
+ * message to user.
+ *
+ * @see HttpResponse::status
+ * @see HttpResponseBody::success
+ * @see HttpResponseBody::message
  *
  * @package KkSeb\Http
  */
@@ -137,13 +145,11 @@ class HttpClient
      * @uses HttpConfigurationException
      *      Un-configured provider or service.
      * @throws \Throwable
-     *      Propagated; unlikely errors normally detected earlier.
+     *      Propagated; unlikely errors (dependency injection container, config)
+     *      normally detected prior to creating a HttpClient.
      */
     public function __construct(string $provider, string $service, string $appTitle = '')
     {
-        // Do not throw exception here; request() must return
-        // HttpRequest->aborted instead.
-
         $this->provider = $provider;
         $this->service = $service;
 
@@ -205,7 +211,7 @@ class HttpClient
      * }
      * @param array $options
      *
-     * @return HttpRequest
+     * @return HttpResponse
      *
      * @uses HttpConfigurationException
      *      Un-configured endpoint or method.
@@ -213,12 +219,11 @@ class HttpClient
      *      Arg method not supported.
      *      Parameters are not nested in path|query|body bucket(s).
      * @throws \Throwable
-     *      Propagated; unlikely errors normally detected earlier.
+     *      Propagated; unlikely errors (dependency injection container, config)
+     *      normally detected prior to creating a HttpClient.
      */
-    public function request(string $endpoint, string $method, array $arguments, array $options = []) : HttpRequest
+    public function request(string $endpoint, string $method, array $arguments, array $options = []) : HttpResponse
     {
-        // Do not throw exception here; return HttpRequest->aborted instead.
-
         $this->operation .= '[' . $endpoint . '][' . $method . ']';
         $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
         $properties = [
@@ -233,7 +238,7 @@ class HttpClient
         // Erred in constructor.
         if ($this->initError) {
             $this->httpLogger->log(LOG_ERR, 'Http init', $this->initError);
-            return (new HttpRequest($properties, [], []))->aborted($this->initError->getCode());
+            return (new HttpRequest($properties, [], [], $this->initError->getCode()))->response;
         }
 
         // HTTP method supported.
@@ -244,7 +249,7 @@ class HttpClient
                 . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
                 $code
             ));
-            return (new HttpRequest($properties, [], []))->aborted($code);
+            return (new HttpRequest($properties, [], [], $code))->response;
         }
 
         // Config section: http-service_kki_seb-personale_cpr.
@@ -257,7 +262,7 @@ class HttpClient
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
                 $code
             ));
-            return (new HttpRequest($properties, [], []))->aborted($code);
+            return (new HttpRequest($properties, [], [], $code))->response;
         }
         // Config section: http-service_kki_seb-personale_cpr_GET.
         if (!($conf_method = $this->config->get(
@@ -270,7 +275,7 @@ class HttpClient
                 . '] is not configured.',
                 $code
             ));
-            return (new HttpRequest($properties, [], []))->aborted($code);
+            return (new HttpRequest($properties, [], [], $code))->response;
         }
 
         // Check that arguments by type are nested.
@@ -283,7 +288,7 @@ class HttpClient
                     . '] don\'t match valid keys[path, query, body], perhaps forgot to nest arguments.',
                     $code
                 ));
-                return (new HttpRequest($properties, [], []))->aborted($code);
+                return (new HttpRequest($properties, [], [], $code))->response;
             }
             // Don't check that path and query args are array; rely on native
             // strict argument type check by RestMini Client request() method.
@@ -320,11 +325,11 @@ class HttpClient
                         'settings+options' => $options,
                     ]
                 );
-                return (new HttpRequest($properties, [], []))->aborted($code);
+                return (new HttpRequest($properties, [], [], $code))->response;
             }
         }
 
-        return new HttpRequest($properties, $options, $arguments);
+        return (new HttpRequest($properties, $options, $arguments))->response;
     }
 
     /**

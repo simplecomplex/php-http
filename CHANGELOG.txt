@@ -1,3 +1,9 @@
+KkSeb/Http 1.x, 2017-08-10
+--------------------------
+- HttpRequest must evaluate HttpResponse; not HttpResponse itself.
+  When (later) implementing a validate feature, that must be able to validate
+  the whole response (including status and headers); not body data only.
+
 KkSeb/Http 1.x, 2017-08-09
 --------------------------
 - New option retry_on_unavailable; 503 Service Unavailable or host not found.

@@ -20,7 +20,8 @@ class HttpResponseBody
      * when error.
      * Send status header 200, set this (response body) status to 500/502/504.
      *
-     * Angular HttpClient ignores response body if header status isn't 200/201.
+     * Angular HttpClient ignores response body if header status isn't 200/201,
+     * thus the 'message' won't be available if sending non-200/201 status.
      * And Angular 'promise' fails if null body.
      *
      * @var int
