@@ -7,8 +7,12 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
+use SimpleComplex\Utils\PathFileList;
 use SimpleComplex\RestMini\Client as RestMiniClient;
+use SimpleComplex\Validate\Validate;
+use SimpleComplex\Validate\ValidationRuleSet;
 use KkSeb\Cache\CacheBroker;
 use KkSeb\Http\Exception\HttpLogicException;
 use KkSeb\Http\Exception\HttpConfigurationException;
@@ -29,6 +33,15 @@ class HttpRequest
      * @var int
      */
     const CACHEABLE_TIME_TO_LIVE = 3600;
+
+    /**
+     * Path to where validation rule set .json-files reside.
+     *
+     * Relative path is relative to document root.
+     *
+     * @var string[]
+     */
+    const PATH_VALIDATION_RULE_SET = '../conf/json/http/validation-rule-sets';
 
     /**
      * Options supported:
@@ -84,7 +97,11 @@ class HttpRequest
     // Protected members.-------------------------------------------------------
 
     /**
-     * @var array
+     * @var array {
+     *      @var string $operation  [provider][server][endpoint][METHOD]
+     *      @var string $appTitle  Localized application title.
+     *      @var HttpLogger $httpLogger
+     * }
      */
     protected $properties;
 
@@ -128,7 +145,7 @@ class HttpRequest
     /**
      * @var \KkSeb\Cache\FileCache|null
      */
-    protected $cacheStore;
+    protected $responseCacheStore;
 
 
     /**
@@ -138,11 +155,8 @@ class HttpRequest
      * (HttpClient).
      *
      * @param array $properties {
-     *      @var string $provider
-     *      @var string $service
-     *      @var string $endpoint
-     *      @var string $method
-     *      @var string $appTitle
+     *      @var string $operation  [provider][server][endpoint][METHOD]
+     *      @var string $appTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }
      * @param array $options
@@ -176,18 +190,12 @@ class HttpRequest
         if (!empty($options['debug_dump'])) {
             $this->debugDump = true;
         }
+
         if (!empty($options['cacheable'])) {
             $chbl = $options['cacheable'];
             $this->cacheable = [
                 'ttl' => static::CACHEABLE_TIME_TO_LIVE,
-                'id' => '['
-                    . join('][', [
-                        $properties['provider'],
-                        $properties['service'],
-                        $properties['endpoint'],
-                        $properties['method'],
-                    ])
-                    . ']user-',
+                'id' => $properties['operation'] . 'user-',
                 'refresh' => false,
             ];
             if ($chbl === true) {
@@ -209,25 +217,24 @@ class HttpRequest
             /** @var CacheBroker $cache_broker */
             $cache_broker = $container->get('cache-broker');
             /** @var \KkSeb\Cache\FileCache $cache_store */
-            $this->cacheStore = $cache_broker->getStore('http-client', CacheBroker::CACHE_VARIABLE_TTL, [
+            $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
                 'ttlDefault' => static::CACHEABLE_TIME_TO_LIVE,
             ]);
             unset($cache_broker);
-        }
 
-        // Get cached if exists (and not to be refreshed),
-        // but do evaluate it anyway.
-        if ($this->cacheable && !$this->cacheable['refresh']) {
-            /** @var HttpResponse|null $cached_response */
-            $cached_response = $this->cacheStore->get($this->cacheable['id']);
-            if ($cached_response) {
-                if ($this->debugDump) {
-                    $this->httpLogger->log(LOG_DEBUG, 'Http cached response ◀', null, $cached_response);
+            // Get cached if exists and not to be refreshed.
+            if (!$this->cacheable['refresh']) {
+                /** @var HttpResponse|null $cached_response */
+                $cached_response = $this->responseCacheStore->get($this->cacheable['id']);
+                if ($cached_response) {
+                    if ($this->debugDump) {
+                        $this->httpLogger->log(LOG_DEBUG, 'Http cached response ◀', null, $cached_response);
+                    }
+                    $this->response = $cached_response;
+                    // Do not evaluate cached response. Assume that response headers
+                    // and 204|404 checks are the same as last time.
+                    return;
                 }
-                $this->response = $cached_response;
-                // Do not evaluate cached response. Assume that response headers
-                // and 204|404 checks are the same as last time.
-                return;
             }
         }
 
@@ -458,5 +465,102 @@ class HttpRequest
          */
 
         return $response;
+    }
+
+    /**
+     * @todo: quite unfinished.
+     *
+     * Validate response against a predefined or passed validation rule set.
+     *
+     * Modifies the response if validation fails.
+     *
+     * Uses cached validation rule set, if empty args
+     * ruleSet and ruleSetJsonPath.
+     *
+     * @param ValidationRuleSet|null $ruleSet
+     * @param string $ruleSetJsonPath
+     *      Path to directory containing JSON-formatted validation rule sets.
+     *      Absolute or relative to document root.
+     *      Filename will be
+     *      'http[provider][server][endpoint][METHOD].validation-rule-set.json'.
+     *
+     * @return HttpResponse
+     */
+    public function validateResponse($ruleSet = null, string $ruleSetJsonPath = '') : HttpResponse
+    {
+        $container = Dependency::container();
+        $utils = Utils::getInstance();
+
+        $failed = false;
+        $code = 0;
+
+        if ($ruleSet) {
+            $rule_set = $ruleSet;
+        } else {
+            if (!$ruleSetJsonPath) {
+                /** @var CacheBroker $cache_broker */
+                $cache_broker = $container->get('cache-broker');
+                /** @var \KkSeb\Cache\PersistentFileCache $cache_store */
+                $rule_set_cache_store = $cache_broker->getStore(
+                    'http-response-validation-rule-set',
+                    CacheBroker::CACHE_PERSISTENT
+                );
+                unset($cache_broker);
+                $rule_set = $rule_set_cache_store->get($this->properties['operation']);
+                if (!$rule_set) {
+                    // Retrieve JSON file from validation rule set path.
+                    /**
+                     * @see \KkSeb\Http\HttpRequest::PATH_VALIDATION_RULE_SET
+                     */
+                    // @todo: using PathFileList.
+                    /**
+                     * @see PathFileList
+                     */
+                    // @todo: and the cache the rule set.
+                }
+            }
+
+            if ($ruleSetJsonPath) {
+                $file_path = null;
+                try {
+                    // Throws various exceptions.
+                    $path = $utils->resolvePath($ruleSetJsonPath);
+                    $file_path = $path . '/http' . $this->properties['operation'] . '.validation-rule-set.json';
+                    // Throws Utils ParseJsonException and \RuntimeException.
+                    $rule_set = $utils->parseJsonFile($file_path);
+                } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
+                    $code = HttpClient::ERROR_CODES['local_configuration'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http validate response',
+                        new \InvalidArgumentException(
+                            'Arg ruleSetJsonPath[' . $ruleSetJsonPath . '] file[' . $file_path
+                            . '] is not parsable, see previous.',
+                            $code,
+                            $xcptn
+                        )
+                    );
+                } catch (\Throwable $xcptn) {
+                    $code = HttpClient::ERROR_CODES['local_use'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http validate response',
+                        new \InvalidArgumentException(
+                            'Arg ruleSetJsonPath[' . $ruleSetJsonPath . ']'
+                            . (!$file_path ? ' is not a valid path.' :
+                                (' file[' . $file_path . '] is non-existent or unreadable, see previous.')
+                            ),
+                            $code,
+                            $xcptn
+                        )
+                    );
+                }
+            } else {
+
+            }
+
+        }
+
+        return new HttpResponse(500, [], new HttpResponseBody(), $this->code);
     }
 }

@@ -130,15 +130,14 @@ class HttpClient
      *         // Underlying RestMini client option.
      *         'request_timeout' => 60,
      *     ]);
-     * $response = (new HttpClient('provider', 'service', 'Some app'))
-     *     ->request('endpoint', 'METHOD', [])
-     *     ->response;
+     * $response = $request->response;
+     * $validated_response = $request->validateResponse();
      * @endcode
      *
      * @param string $provider
-     *      Lispcased, some-provider.
+     *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $service
-     *      Lispcased, some-service.
+     *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $appTitle
      *      Default: localeText http:app-title.
      *
@@ -201,7 +200,7 @@ class HttpClient
 
     /**
      * @param string $endpoint
-     *      Lisp-cased, some-endpoint.
+     *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $method
      *      HEAD|GET|POST|PUT|DELETE.
      * @param array $arguments {
@@ -227,10 +226,7 @@ class HttpClient
         $this->operation .= '[' . $endpoint . '][' . $method . ']';
         $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
         $properties = [
-            'provider' => $this->provider,
-            'service' => $this->service,
-            'endpoint' => $endpoint,
-            'method' => $method,
+            'operation' => $this->operation,
             'appTitle' => $this->appTitle,
             'httpLogger' => $this->httpLogger,
         ];
