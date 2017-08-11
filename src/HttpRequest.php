@@ -280,7 +280,7 @@ class HttpRequest
                 case 'option_value_empty':
                 case 'option_value_invalid':
                     $this->aborted = true;
-                    $this->code = HttpClient::ERROR_CODES['local_configuration'];
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
                     // Do log even though RestMini Client also logs (as error),
                     // because we want a trace.
                     // And these errors are unlikely but severe.
@@ -300,7 +300,7 @@ class HttpRequest
                     return;
                 default:
                     $this->aborted = true;
-                    $this->code = HttpClient::ERROR_CODES['local_default'];
+                    $this->code = HttpClient::ERROR_CODES['local-default'];
                     // Do log even though RestMini Client also logs (as error),
                     // because we want a trace.
                     // And these errors are unlikely but severe.
@@ -408,7 +408,7 @@ class HttpRequest
 
         // Paranoid.
         if (!$this->response) {
-            $this->code = HttpClient::ERROR_CODES['local_algo'];
+            $this->code = HttpClient::ERROR_CODES['local-algo'];
             // Do log even though RestMini Client also logs (as error),
             // because we want a trace.
             // And these errors are unlikely but severe.
@@ -477,26 +477,26 @@ class HttpRequest
                         case 500:
                             // Set to Bad Gateway; not our fault.
                             $response->status = $body->status = 502;
-                            $this->code = HttpClient::ERROR_CODES['remote_default'];
+                            $this->code = HttpClient::ERROR_CODES['remote-default'];
                             break;
                         case 502:
                             // Bad Gateway; keep status.
-                            $this->code = HttpClient::ERROR_CODES['remote_propagated'];
+                            $this->code = HttpClient::ERROR_CODES['remote-propagated'];
                             break;
                         case 503:
                             // Service unavailable.
                             // Keep status, frontend client may wish to retry later.
-                            $this->code = HttpClient::ERROR_CODES['service_unavailable'];
+                            $this->code = HttpClient::ERROR_CODES['service-unavailable'];
                             break;
                         case 504:
                             // Request timeout; keep status.
-                            $this->code = HttpClient::ERROR_CODES['timeout_propagated'];
+                            $this->code = HttpClient::ERROR_CODES['timeout-propagated'];
                             break;
                         default:
                             // Unexpecteds; set to Bad Gateway, not our fault.
                             // But keep the the original status on $body->status.
                             $response->status = 502;
-                            $this->code = HttpClient::ERROR_CODES['malign_status_unexpected'];
+                            $this->code = HttpClient::ERROR_CODES['malign-status-unexpected'];
                     }
                     break;
                 case 'request_timed_out':
@@ -509,39 +509,39 @@ class HttpRequest
                     // 502 Bad Gateway.
                     // Perhaps upon retry (option: 'retry_on_unavailable').
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['host_unavailable'];
+                    $this->code = HttpClient::ERROR_CODES['host-unavailable'];
                     break;
                 case 'response_false':
                     // 502 Bad Gateway.
                     // RestMini Client's fallback cURL error.
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['request_default'];
+                    $this->code = HttpClient::ERROR_CODES['request-default'];
                     break;
                 case 'content_type_mismatch':
                     // Probably HTML body.
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['response_default'];
+                    $this->code = HttpClient::ERROR_CODES['response-default'];
                     break;
                 case 'response_parse':
                     // Bad JSON.
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['response_format'];
+                    $this->code = HttpClient::ERROR_CODES['response-format'];
                     break;
                 case 'too_many_redirects':
                     // 502 Bad Gateway.
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['too_many_redirects'];
+                    $this->code = HttpClient::ERROR_CODES['too-many-redirects'];
                     break;
                 case 'init_connection':
                 case 'request_options':
                     // Unexpected cURL related.
                     $response->status = $body->status = 500;
-                    $this->code = HttpClient::ERROR_CODES['local_default'];
+                    $this->code = HttpClient::ERROR_CODES['local-default'];
                     break;
                 case 'url_malformed':
                     // Apparantly RestMini Client produced a bad URL.
                     $response->status = $body->status = 500;
-                    $this->code = HttpClient::ERROR_CODES['local_configuration'];
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
                     break;
                 default:
                     // Perhaps an SSL error. Probably our fault.
@@ -576,11 +576,11 @@ class HttpRequest
                     ) {
                         // Keep status; flag failure on response body.
                         $body->success = false;
-                        $this->code = HttpClient::ERROR_CODES['endpoint_not_found'];
+                        $this->code = HttpClient::ERROR_CODES['endpoint-not-found'];
                     } elseif (!empty($this->options['err_on_resource_not_found'])) {
                         // Keep status; flag failure on response body.
                         $body->success = false;
-                        $this->code = HttpClient::ERROR_CODES['resource_not_found'];
+                        $this->code = HttpClient::ERROR_CODES['resource-not-found'];
                     }
                     break;
                 default:
@@ -590,7 +590,7 @@ class HttpRequest
                     // Unexpecteds; set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
                     $response->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['benign_status_unexpected'];
+                    $this->code = HttpClient::ERROR_CODES['benign-status-unexpected'];
             }
         }
         // Handle error.
@@ -615,7 +615,7 @@ class HttpRequest
             // Set body 'message'.
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = Dependency::container()->get('locale');
-            $body->message = $locale->text('http:error_' . str_replace('_', '-', $code_names[$this->code]));
+            $body->message = $locale->text('http:error_' . $code_names[$this->code]);
         }
 
         return $response;
@@ -683,7 +683,7 @@ class HttpRequest
                     // Throws Utils ParseJsonException and \RuntimeException.
                     $rule_set = $utils->parseJsonFile($file_path);
                 } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
-                    $code = HttpClient::ERROR_CODES['local_configuration'];
+                    $code = HttpClient::ERROR_CODES['local-configuration'];
                     $this->httpLogger->log(
                         LOG_ERR,
                         'Http validate response',
@@ -695,7 +695,7 @@ class HttpRequest
                         )
                     );
                 } catch (\Throwable $xcptn) {
-                    $code = HttpClient::ERROR_CODES['local_use'];
+                    $code = HttpClient::ERROR_CODES['local-use'];
                     $this->httpLogger->log(
                         LOG_ERR,
                         'Http validate response',

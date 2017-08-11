@@ -64,38 +64,38 @@ class HttpClient
     const ERROR_CODES = [
         'unknown' => 1,
 
-        'local_default' => 10,
-        'local_configuration' => 11,
-        'local_use' => 12,
-        'local_algo' => 13,
+        'local-default' => 10,
+        'local-algo' => 11,
+        'local-use' => 12,
+        'local-configuration' => 13,
 
-        'host_unavailable' => 20,
-        'service_unavailable' => 21,
-        'too_many_redirects' => 22,
+        'host-unavailable' => 20,
+        'service-unavailable' => 21,
+        'too-many-redirects' => 22,
         // cURL 504.
         'timeout' => 30,
         // Status 504.
-        'timeout_propagated' => 31,
-        // cURL 500 (RestMini Client 'response_false').
-        'request_default' => 40,
+        'timeout-propagated' => 31,
+        // cURL 500 (RestMini Client 'response-false').
+        'request-default' => 40,
         // Status 500.
-        'remote_default' => 50,
+        'remote-default' => 50,
         // Remote says 502 Bad Gateway.
-        'remote_propagated' => 51,
+        'remote-propagated' => 51,
 
-        'malign_status_unexpected' => 59,
+        'malign-status-unexpected' => 59,
 
-        'endpoint_not_found' => 60,
-        'resource_not_found' => 61,
+        'endpoint-not-found' => 60,
+        'resource-not-found' => 61,
         // 400 Bad Request, 412 Precondition Failed.
-        'remote_validation' => 70,
+        'remote-validation' => 70,
         // Content type mismatch.
-        'response_default' => 80,
-        'benign_status_unexpected' => 89,
+        'response-default' => 80,
+        'benign-status-unexpected' => 89,
         // Parse error.
-        'response_format' => 81,
+        'response-format' => 81,
 
-        'response_validation' => 90,
+        'response-validation' => 90,
     ];
 
     /*
@@ -208,13 +208,13 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg provider[' . $provider . '] global config section['
                 . 'http-provider_' . $provider . '] is not configured.',
-                static::ERROR_CODES['local_configuration']
+                static::ERROR_CODES['local-configuration']
             );
         } elseif (!empty($conf_provider['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_provider['cacheable']) . '] is illegal on provider level.',
-                static::ERROR_CODES['local_configuration']
+                static::ERROR_CODES['local-configuration']
             );
         }
         // Config section: http-service_kki_seb-personale.
@@ -222,13 +222,13 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg service[' . $provider . '] global config section['
                 . 'http-service_' . $provider . '_' . $service . '] is not configured.',
-                static::ERROR_CODES['local_configuration']
+                static::ERROR_CODES['local-configuration']
             );
         } elseif (!empty($conf_service['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_service['cacheable']) . '] is illegal on service level.',
-                static::ERROR_CODES['local_configuration']
+                static::ERROR_CODES['local-configuration']
             );
         } else {
             // A-OK, so far.
@@ -284,7 +284,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
 
         // HTTP method supported.
         if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
-            $code = static::ERROR_CODES['local_use'];
+            $code = static::ERROR_CODES['local-use'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
                 'client abort, request() arg method[' . $method . '] is not among supported methods '
                 . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
@@ -297,7 +297,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
         if (!($conf_endpoint = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint, '*')
         )) {
-            $code = static::ERROR_CODES['local_configuration'];
+            $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
@@ -309,7 +309,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
         if (!($conf_method = $this->config->get(
             'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method, '*')
         )) {
-            $code = static::ERROR_CODES['local_configuration'];
+            $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method
@@ -323,7 +323,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
         if ($arguments) {
             $keys = array_keys($arguments);
             if (($diff = array_diff($keys, ['path', 'query', 'body']))) {
-                $code = static::ERROR_CODES['local_use'];
+                $code = static::ERROR_CODES['local-use'];
                 $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
                     'client abort, request() arg arguments keys[' . join(', ', $keys)
                     . '] don\'t match valid keys[path, query, body], perhaps forgot to nest arguments.',
@@ -354,7 +354,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
                 } else {
                     $msg = 'is empty';
                 }
-                $code = static::ERROR_CODES['local_configuration'];
+                $code = static::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
                     'Http init',
