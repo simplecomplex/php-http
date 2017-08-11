@@ -204,7 +204,7 @@ class HttpClient
         } elseif (!empty($conf_provider['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
-                . Utils::getType($conf_provider['cacheable']) . '] is illegal on provider level.',
+                . Utils::getType($conf_provider['cacheable']) . '] is only allowed on method level (or as option).',
                 static::ERROR_CODES['local-configuration']
             );
         }
@@ -218,7 +218,7 @@ class HttpClient
         } elseif (!empty($conf_service['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
-                . Utils::getType($conf_service['cacheable']) . '] is illegal on service level.',
+                . Utils::getType($conf_service['cacheable']) . '] is only allowed on method level (or as option).',
                 static::ERROR_CODES['local-configuration']
             );
         } else {
@@ -247,7 +247,7 @@ class HttpClient
      *      Numerically indexed is also supported.
      * @param array $options
      *
-     * @return \KkSeb\Http\HttpResponse
+     * @return \KkSeb\Http\HttpRequest
      *
      * @uses HttpConfigurationException
      *      Un-configured endpoint or method.
@@ -297,6 +297,14 @@ class HttpClient
                 $code
             ));
             return new HttpRequest($properties, [], [], $code);
+        } elseif (!empty($conf_endpoint['cacheable'])) {
+            $code = static::ERROR_CODES['local-configuration'];
+            $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
+                'Client abort, truthy config setting \'cacheable\' type['
+                . Utils::getType($conf_endpoint['cacheable']) . '] is only allowed on method level (or as option).',
+                static::ERROR_CODES['local-configuration'],
+                $code
+            ));
         }
         // Config section: http-service_kki_seb-personale_cpr_GET.
         if (!($conf_method = $this->config->get(
@@ -356,7 +364,7 @@ class HttpClient
                     . ' perhaps forgot to nest arguments.',
                     $code
                 ));
-                return (new HttpRequest($properties, [], [], $code))->response;
+                return new HttpRequest($properties, [], [], $code);
             }
             unset($args_invalid, $keys, $keys_stringed);
         }
