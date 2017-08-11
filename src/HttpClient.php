@@ -244,6 +244,7 @@ class HttpClient
      *      @var array $query  Optional.
      *      @var mixed $body  Optional.
      * }
+     *      Numerically indexed is also supported.
      * @param array $options
      *
      * @return \KkSeb\Http\HttpResponse
@@ -252,7 +253,8 @@ class HttpClient
      *      Un-configured endpoint or method.
      * @uses \InvalidArgumentException
      *      Arg method not supported.
-     *      Parameters are not nested in path|query|body bucket(s).
+     *      Parameters are neither nested in numerically indexed buckets
+     *      nor path|query|body bucket(s).
      * @throws \Throwable
      *      Propagated; unlikely errors (dependency injection container, config)
      *      normally detected prior to creating a HttpClient.
@@ -310,20 +312,53 @@ class HttpClient
             return (new HttpRequest($properties, [], [], $code))->response;
         }
 
-        // Check that arguments by type are nested.
+        // Check that arguments by type are nested and have valid keys.
         if ($arguments) {
+            $args_invalid = false;
             $keys = array_keys($arguments);
-            if (($diff = array_diff($keys, ['path', 'query', 'body']))) {
+            if (count($keys) > 3) {
+                $args_invalid = true;
+            }
+            $keys_stringed = join('', $keys);
+            if ($keys_stringed === '') {
+                $args_invalid = true;
+            } elseif (ctype_digit($keys_stringed)) {
+                switch ($keys_stringed) {
+                    case '0':
+                        $arguments['path'] = $arguments[0];
+                        unset($arguments[0]);
+                        break;
+                    case '01':
+                        $arguments['path'] = $arguments[0];
+                        $arguments['query'] = $arguments[1];
+                        unset($arguments[0], $arguments[1]);
+                        break;
+                    case '012':
+                        $arguments['path'] = $arguments[0];
+                        $arguments['query'] = $arguments[1];
+                        $arguments['body'] = $arguments[2];
+                        unset($arguments[0], $arguments[1], $arguments[2]);
+                        break;
+                    default:
+                        $args_invalid = true;
+                }
+            }
+            if (!$args_invalid && ($diff = array_diff($keys, ['path', 'query', 'body']))) {
+                $args_invalid = true;
+            }
+            // Don't check that path and query args are array; rely on native
+            // strict argument type check by RestMini Client request() method.
+            if ($args_invalid) {
                 $code = static::ERROR_CODES['local-use'];
                 $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
                     'Client abort, request() arg arguments keys[' . join(', ', $keys)
-                    . '] don\'t match valid keys[path, query, body], perhaps forgot to nest arguments.',
+                    . '] don\'t match valid numerically indexed keys or associative keys[path, query, body],'
+                    . ' perhaps forgot to nest arguments.',
                     $code
                 ));
                 return (new HttpRequest($properties, [], [], $code))->response;
             }
-            // Don't check that path and query args are array; rely on native
-            // strict argument type check by RestMini Client request() method.
+            unset($args_invalid, $keys, $keys_stringed);
         }
 
         $options = array_replace_recursive($this->settings, $conf_endpoint, $conf_method, $options);

@@ -1,6 +1,7 @@
 KkSeb/Http 1.x, 2017-08-11
 --------------------------
 - HttpClient/HttpRequest error handling complete.
+- HttpClient::request() support numerically indexed path, query, body arguments.
 
 KkSeb/Http 1.x, 2017-08-10
 --------------------------
