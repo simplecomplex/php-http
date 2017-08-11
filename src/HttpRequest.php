@@ -99,6 +99,7 @@ class HttpRequest
 
     /**
      * @var array {
+     *      @var string $method  METHOD
      *      @var string $operation  [provider][server][endpoint][METHOD]
      *      @var string $appTitle  Localized application title.
      *      @var HttpLogger $httpLogger
@@ -156,6 +157,7 @@ class HttpRequest
      * (HttpClient).
      *
      * @param array $properties {
+     *      @var string $method  METHOD
      *      @var string $operation  [provider][server][endpoint][METHOD]
      *      @var string $appTitle  Localized application title.
      *      @var HttpLogger $httpLogger
@@ -251,17 +253,15 @@ class HttpRequest
      */
     protected function execute() /*: void*/
     {
+        $base_url = $this->options['base_url'];
+        $endpoint_path = $this->options['endpoint_path'];
+
         // Filter non-RestMini Client options off,
         // even option not supported at all.
         $client_options = array_intersect_assoc(
             $this->options,
             array_fill_keys(RestMiniClient::OPTIONS_SUPPORTED, true)
         );
-
-        // Remove constructor args.
-        $base_url = $client_options['base_url'];
-        $endpoint_path = $client_options['endpoint_path'];
-        unset($client_options['base_url'], $client_options['endpoint_path']);
 
         $client = new RestMiniClient($base_url, $endpoint_path, $client_options);
 
@@ -358,6 +358,7 @@ class HttpRequest
                 || $client_error['name'] == 'host_not_found' || $client_error['name'] == 'connection_failed'
             )
         ) {
+            $client->reset();
             usleep(1000 * $this->options['retry_on_unavailable']);
             // Re-send; RestMini Client resets itself at secondary request().
             $client->request(
@@ -414,7 +415,8 @@ class HttpRequest
                     $status,
                     !empty($this->options['get_headers']) ? $client->headers() : [],
                     $body
-                )
+                ),
+                $client_error
             );
         }
 
@@ -458,7 +460,8 @@ class HttpRequest
      *
      * @return \KkSeb\Http\HttpResponse
      */
-    protected function evaluateResponse(HttpResponse $response, array $error = [], array $info = []) : HttpResponse {
+    protected function evaluateResponse(HttpResponse $response, array $error = [], array $info = []) : HttpResponse
+    {
         // Refer the inner HttpResponseBody.
         $body = $response->body;
 
@@ -468,11 +471,13 @@ class HttpRequest
             $code_names = array_flip(HttpClient::ERROR_CODES);
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = Dependency::container()->get('locale');
-            $body->message = $locale->text('http:error:' . $code_names[$this->code])
+            $replacers = [
+                'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+                'app-title' => $this->properties['appTitle'],
+            ];
+            $body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('error-suffix_user-report-error', [
-                    'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code]
-                ]);
+                . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
 
             // Aborted is already logged.
             return $response;
@@ -624,7 +629,7 @@ class HttpRequest
                 'Http response',
                 new HttpResponseException(
                     'Response evaluates to HttpClient error[' . $code_names[$this->code] . '].',
-                    $this->code
+                    $this->code + HttpClient::ERROR_CODE_OFFSET
                 ),
                 [
                     'final status' => $response->status,
@@ -637,7 +642,11 @@ class HttpRequest
             // Set body 'message'.
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = Dependency::container()->get('locale');
-            $body->message = $locale->text('http:error:' . $code_names[$this->code]);
+            $replacers = [
+                'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+                'app-title' => $this->properties['appTitle'],
+            ];
+            $body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers);
             switch ($code_names[$this->code]) {
                 case 'timeout':
                 case 'timeout-propagated':
@@ -645,10 +654,7 @@ class HttpRequest
                     break;
                 default:
                     // Deliberately '\n' not "\n".
-                    $body->message .= '\n' . $locale->text('error-suffix_user-report-error', [
-                            'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET)
-                                . ':http:' . $code_names[$this->code]
-                        ]);
+                    $body->message .= '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
             }
         }
 
@@ -672,9 +678,9 @@ class HttpRequest
      *      Filename will be
      *      'http[provider][server][endpoint][METHOD].validation-rule-set.json'.
      *
-     * @return \KkSeb\Http\HttpResponse
+     * @return $this|HttpRequest
      */
-    public function validateResponse($ruleSet = null, string $ruleSetJsonPath = '') : HttpResponse
+    public function validateResponse($ruleSet = null, string $ruleSetJsonPath = '') : HttpRequest
     {
         $container = Dependency::container();
         $utils = Utils::getInstance();
@@ -724,7 +730,7 @@ class HttpRequest
                         new \InvalidArgumentException(
                             'Arg ruleSetJsonPath[' . $ruleSetJsonPath . '] file[' . $file_path
                             . '] is not parsable, see previous.',
-                            $code,
+                            $code + HttpClient::ERROR_CODE_OFFSET,
                             $xcptn
                         )
                     );
@@ -738,7 +744,7 @@ class HttpRequest
                             . (!$file_path ? ' is not a valid path.' :
                                 (' file[' . $file_path . '] is non-existent or unreadable, see previous.')
                             ),
-                            $code,
+                            $code + HttpClient::ERROR_CODE_OFFSET,
                             $xcptn
                         )
                     );
@@ -749,6 +755,6 @@ class HttpRequest
 
         }
 
-        return new HttpResponse(500, [], new HttpResponseBody());
+        return $this;
     }
 }

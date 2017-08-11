@@ -60,7 +60,7 @@ class HttpLogger
             $code = $exception->getCode();
             $context['code'] = $code;
             $context['exception'] = $exception;
-            $msg .= ' ' . $inspect->trace($exception);
+            $msg .= "\n" . $inspect->trace($exception);
         }
         if ($variables) {
             $msg .= "\n" . $inspect->variable($variables);

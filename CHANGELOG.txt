@@ -4,6 +4,7 @@ KkSeb/Http 1.x, 2017-08-11
 - HttpClient::request() support numerically indexed path, query, body arguments.
 - HttpClient::request() return HttpRequest; not HttpResponse.
 - 'cacheable' is only allowed on 'method' config level and/or as option.
+- Works, at least against a 'host_not_found' host.
 
 KkSeb/Http 1.x, 2017-08-10
 --------------------------
