@@ -259,7 +259,7 @@ class HttpClient
      *      Propagated; unlikely errors (dependency injection container, config)
      *      normally detected prior to creating a HttpClient.
      */
-    public function request(string $endpoint, string $method, array $arguments, array $options = []) : HttpResponse
+    public function request(string $endpoint, string $method, array $arguments, array $options = []) : HttpRequest
     {
         $this->operation .= '[' . $endpoint . '][' . $method . ']';
         $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
@@ -272,7 +272,7 @@ class HttpClient
         // Erred in constructor.
         if ($this->initError) {
             $this->httpLogger->log(LOG_ERR, 'Http init', $this->initError);
-            return (new HttpRequest($properties, [], [], $this->initError->getCode()))->response;
+            return new HttpRequest($properties, [], [], $this->initError->getCode());
         }
 
         // HTTP method supported.
@@ -283,7 +283,7 @@ class HttpClient
                 . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
                 $code
             ));
-            return (new HttpRequest($properties, [], [], $code))->response;
+            return new HttpRequest($properties, [], [], $code);
         }
 
         // Config section: http-service_kki_seb-personale_cpr.
@@ -296,7 +296,7 @@ class HttpClient
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
                 $code
             ));
-            return (new HttpRequest($properties, [], [], $code))->response;
+            return new HttpRequest($properties, [], [], $code);
         }
         // Config section: http-service_kki_seb-personale_cpr_GET.
         if (!($conf_method = $this->config->get(
@@ -309,7 +309,7 @@ class HttpClient
                 . '] is not configured.',
                 $code
             ));
-            return (new HttpRequest($properties, [], [], $code))->response;
+            return new HttpRequest($properties, [], [], $code);
         }
 
         // Check that arguments by type are nested and have valid keys.
@@ -392,11 +392,11 @@ class HttpClient
                         'settings+options' => $options,
                     ]
                 );
-                return (new HttpRequest($properties, [], [], $code))->response;
+                return new HttpRequest($properties, [], [], $code);
             }
         }
 
-        return (new HttpRequest($properties, $options, $arguments))->response;
+        return new HttpRequest($properties, $options, $arguments);
     }
 
     /**
