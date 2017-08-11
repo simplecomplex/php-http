@@ -64,55 +64,46 @@ class HttpClient
     const ERROR_CODES = [
         'unknown' => 1,
 
-        'local-default' => 10,
+        'local-unknown' => 10,
         'local-algo' => 11,
         'local-use' => 12,
         'local-configuration' => 13,
+        'local-option' => 14,
+        'local-init' => 15,
 
         'host-unavailable' => 20,
         'service-unavailable' => 21,
-        'too-many-redirects' => 22,
+        'too-many-redirects' => 23,
         // cURL 504.
         'timeout' => 30,
         // Status 504.
         'timeout-propagated' => 31,
         // cURL 500 (RestMini Client 'response-false').
-        'request-default' => 40,
+        'response-none' => 40,
         // Status 500.
-        'remote-default' => 50,
+        'remote' => 50,
         // Remote says 502 Bad Gateway.
         'remote-propagated' => 51,
-
+        // Unsupported 5xx status.
         'malign-status-unexpected' => 59,
 
+        // 404 + Content-Type not JSON (probably HTML); no such endpoint.
         'endpoint-not-found' => 60,
+        // Unexpected 204, 404 + Content-Type JSON; no such resource (object).
         'resource-not-found' => 61,
+
         // 400 Bad Request, 412 Precondition Failed.
-        'remote-validation' => 70,
+        'remote-validation-bad' => 70,
+        'remote-validation-failed' => 71,
         // Content type mismatch.
-        'response-default' => 80,
-        'benign-status-unexpected' => 89,
+        'response-type' => 81,
         // Parse error.
-        'response-format' => 81,
+        'response-format' => 82,
+        // Unsupported non-5xx status.
+        'benign-status-unexpected' => 89,
 
         'response-validation' => 90,
     ];
-
-    /*
-; 404 + Content-Type JSON: no such resource (object).
-error_resource-not-found = %app-title fejlede fordi en service svarede at et objekt ikke findes.
-; 404 + Content-Type HTML: no such endpoint.
-error_endpoint-not-found = %app-title fejlede fordi et service slutpunkt ikke findes.
-; 400, 412 service validation failure.
-error_remote-validation = %app-title fejlede fordi et argument i et service-kald var forkert.
-; 502 Bad Gateway.
-error_remote-propagated = %app-title fejlede fordi en service's underliggende system fejler.
-; 500 and likewise.
-error_remote-default = %app-title fejlede pga. en fejl i svaret fra en service.
-;; Response structure/content errors.-------------------------------------------
-; Response body validation failure.
-error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
-     */
 
     /**
      * @var string
@@ -286,7 +277,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
         if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
             $code = static::ERROR_CODES['local-use'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
-                'client abort, request() arg method[' . $method . '] is not among supported methods '
+                'Client abort, request() arg method[' . $method . '] is not among supported methods '
                 . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
                 $code
             ));
@@ -299,7 +290,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
         )) {
             $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
-                'client abort, request() arg endpoint[' . $endpoint . '] global config section['
+                'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
                 $code
             ));
@@ -311,7 +302,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
         )) {
             $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
-                'client abort, request() arg endpoint[' . $endpoint . '] global config section['
+                'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method
                 . '] is not configured.',
                 $code
@@ -325,7 +316,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
             if (($diff = array_diff($keys, ['path', 'query', 'body']))) {
                 $code = static::ERROR_CODES['local-use'];
                 $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
-                    'client abort, request() arg arguments keys[' . join(', ', $keys)
+                    'Client abort, request() arg arguments keys[' . join(', ', $keys)
                     . '] don\'t match valid keys[path, query, body], perhaps forgot to nest arguments.',
                     $code
                 ));
@@ -359,7 +350,7 @@ error_response-schema = %app-title fejlede pga. en fejl i data fra en service.
                     LOG_ERR,
                     'Http init',
                     new HttpConfigurationException(
-                        'client abort, settings+options \'' . $name . '\' ' . $msg . '.',
+                        'Client abort, settings+options \'' . $name . '\' ' . $msg . '.',
                         $code
                     ),
                     [

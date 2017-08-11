@@ -72,7 +72,7 @@ class HttpRequest
         'require_response_headers',
         // bool; 404 + HTML.
         'err_on_endpoint_not_found',
-        // bool; 204, 404 + JSON.
+        // bool; unexpected 204, 404 + JSON.
         'err_on_resource_not_found',
     ];
 
@@ -275,51 +275,63 @@ class HttpRequest
             switch ($error_name) {
                 case 'server_arg_empty':
                 case 'protocol_not_supported':
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                    $exception = new HttpConfigurationException(
+                        'Request abort, configuration error code[' . $client_error['code']
+                        . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
+                        $this->code
+                    );
+                    break;
                 case 'option_not_supported':
                 case 'option_value_missing':
                 case 'option_value_empty':
                 case 'option_value_invalid':
-                    $this->aborted = true;
-                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                    // Do log even though RestMini Client also logs (as error),
-                    // because we want a trace.
-                    // And these errors are unlikely but severe.
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http init',
-                        new HttpConfigurationException(
-                            'request abort, configuration error code[' . $client_error['code']
-                            . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
-                            $this->code
-                        ),
-                        [
-                            'options passed' => $this->options,
-                        ]
+                    $this->code = HttpClient::ERROR_CODES['local-option'];
+                    $exception = new HttpConfigurationException(
+                        'Request abort, RestMinit Client option error code[' . $client_error['code']
+                        . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
+                        $this->code
                     );
-                    $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
-                    return;
+                    break;
+                case 'init_connection':
+                    $this->code = HttpClient::ERROR_CODES['local-init'];
+                    $exception = new HttpConfigurationException(
+                        'Request abort, cURL init error code[' . $client_error['code']
+                        . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
+                        $this->code
+                    );
+                    break;
+                case 'request_options':
+                    $this->code = HttpClient::ERROR_CODES['local-option'];
+                    $exception = new HttpConfigurationException(
+                        'Request abort, cURL option error code[' . $client_error['code']
+                        . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
+                        $this->code
+                    );
+                    break;
                 default:
-                    $this->aborted = true;
-                    $this->code = HttpClient::ERROR_CODES['local-default'];
-                    // Do log even though RestMini Client also logs (as error),
-                    // because we want a trace.
-                    // And these errors are unlikely but severe.
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http init',
-                        // Logic exception, because this should not be possible.
-                        new HttpLogicException(
-                            'request abort, unexpected error code[' . $client_error['code']
-                            . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
-                            $this->code
-                        ),
-                        [
-                            'options passed' => $this->options,
-                        ]
+                    $this->code = HttpClient::ERROR_CODES['local-unknown'];
+                    $exception = new HttpLogicException(
+                        'Request abort, unexpected error code[' . $client_error['code']
+                        . '] name[' . $error_name . '] message[' . $client_error['message'] . '].',
+                        $this->code
                     );
-                    $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
-                    return;
             }
+            $this->aborted = true;
+            // Do log even though RestMini Client also logs (as error),
+            // because we want a trace.
+            // And these errors are unlikely but severe.
+            $this->httpLogger->log(
+                LOG_ERR,
+                'Http init',
+                // Logic exception, because this should not be possible.
+                $exception,
+                [
+                    'options' => $this->options,
+                ]
+            );
+            $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
+            return;
         }
 
         if ($this->debugDump) {
@@ -408,22 +420,18 @@ class HttpRequest
 
         // Paranoid.
         if (!$this->response) {
+            $this->aborted = true;
             $this->code = HttpClient::ERROR_CODES['local-algo'];
             // Do log even though RestMini Client also logs (as error),
             // because we want a trace.
             // And these errors are unlikely but severe.
             $this->httpLogger->log(LOG_ERR, 'Http request', new HttpLogicException(
-                'algo error in this method, did not set response instance var at all.',
+                'Algo error in this method, did not set response instance var at all.',
                 $this->code
             ));
             $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
         }
     }
-
-    /**
-     * @todo: write locale text error messages in accordance with HttpCLient::ERROR_CODES
-     * @see \KkSeb\Http\HttpCLient::ERROR_CODES.
-     */
 
     /**
      * Evaluates response object and modifies it if response status
@@ -460,8 +468,13 @@ class HttpRequest
             $code_names = array_flip(HttpClient::ERROR_CODES);
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = Dependency::container()->get('locale');
-            $body->message = $locale->text('http:error_' . str_replace('_', '-', $code_names[$this->code]));
+            $body->message = $locale->text('http:error:' . $code_names[$this->code])
+                // Deliberately '\n' not "\n".
+                . '\n' . $locale->text('error-suffix_user-report-error', [
+                    'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code]
+                ]);
 
+            // Aborted is already logged.
             return $response;
         }
 
@@ -477,7 +490,7 @@ class HttpRequest
                         case 500:
                             // Set to Bad Gateway; not our fault.
                             $response->status = $body->status = 502;
-                            $this->code = HttpClient::ERROR_CODES['remote-default'];
+                            $this->code = HttpClient::ERROR_CODES['remote'];
                             break;
                         case 502:
                             // Bad Gateway; keep status.
@@ -515,12 +528,12 @@ class HttpRequest
                     // 502 Bad Gateway.
                     // RestMini Client's fallback cURL error.
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['request-default'];
+                    $this->code = HttpClient::ERROR_CODES['response-none'];
                     break;
                 case 'content_type_mismatch':
                     // Probably HTML body.
                     $response->status = $body->status = 502;
-                    $this->code = HttpClient::ERROR_CODES['response-default'];
+                    $this->code = HttpClient::ERROR_CODES['response-type'];
                     break;
                 case 'response_parse':
                     // Bad JSON.
@@ -532,16 +545,10 @@ class HttpRequest
                     $response->status = $body->status = 502;
                     $this->code = HttpClient::ERROR_CODES['too-many-redirects'];
                     break;
-                case 'init_connection':
-                case 'request_options':
-                    // Unexpected cURL related.
-                    $response->status = $body->status = 500;
-                    $this->code = HttpClient::ERROR_CODES['local-default'];
-                    break;
                 case 'url_malformed':
                     // Apparantly RestMini Client produced a bad URL.
                     $response->status = $body->status = 500;
-                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                    $this->code = HttpClient::ERROR_CODES['local-use'];
                     break;
                 default:
                     // Perhaps an SSL error. Probably our fault.
@@ -552,6 +559,10 @@ class HttpRequest
             $body->code = $this->code;
         }
         else {
+            // Apparantly successful request/response.
+            // Arg $info will be non-empty, and if option 'record_args'
+            // $info even contains the request arguments sent.
+
             // Every status but 200|201|204|304|404 is considered malign.
             switch ($original_status) {
                 case 200:
@@ -569,6 +580,11 @@ class HttpRequest
                 case 304: // Not Modified.
                     // Swell.
                     break;
+                case 400: // Bad Request.
+                    $body->success = false;
+                    // Keep status.
+                    $this->code = HttpClient::ERROR_CODES['remote-validation-bad'];
+                    break;
                 case 404:
                     if (
                         !empty($this->options['err_on_endpoint_not_found'])
@@ -577,15 +593,21 @@ class HttpRequest
                         // Keep status; flag failure on response body.
                         $body->success = false;
                         $this->code = HttpClient::ERROR_CODES['endpoint-not-found'];
-                    } elseif (!empty($this->options['err_on_resource_not_found'])) {
+                    }
+                    elseif (!empty($this->options['err_on_resource_not_found'])) {
                         // Keep status; flag failure on response body.
                         $body->success = false;
                         $this->code = HttpClient::ERROR_CODES['resource-not-found'];
                     }
                     break;
+                case 412: // Precondition Failed.
+                    $body->success = false;
+                    // Keep status.
+                    $this->code = HttpClient::ERROR_CODES['remote-validation-failed'];
+                    break;
                 default:
                     // Any other status is considered malign; though not as malign
-                    // as unsupported 5XX status.
+                    // as unsupported 5xx status.
                     $body->success = false;
                     // Unexpecteds; set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
@@ -615,7 +637,19 @@ class HttpRequest
             // Set body 'message'.
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = Dependency::container()->get('locale');
-            $body->message = $locale->text('http:error_' . $code_names[$this->code]);
+            $body->message = $locale->text('http:error:' . $code_names[$this->code]);
+            switch ($code_names[$this->code]) {
+                case 'timeout':
+                case 'timeout-propagated':
+                    // User shan't report issue for 504 Gateway Timeout.
+                    break;
+                default:
+                    // Deliberately '\n' not "\n".
+                    $body->message .= '\n' . $locale->text('error-suffix_user-report-error', [
+                            'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET)
+                                . ':http:' . $code_names[$this->code]
+                        ]);
+            }
         }
 
         return $response;

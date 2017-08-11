@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-08-11
+--------------------------
+- HttpClient/HttpRequest error handling complete.
+
 KkSeb/Http 1.x, 2017-08-10
 --------------------------
 - HttpRequest must evaluate HttpResponse; not HttpResponse itself.
