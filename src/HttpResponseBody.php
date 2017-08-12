@@ -53,4 +53,22 @@ class HttpResponseBody
      * @var int|null
      */
     public $code;
+
+    /**
+     * All parameters are optional.
+     *
+     * @param int $status
+     * @param bool $success
+     * @param mixed|null $data
+     * @param string|null $message
+     * @param int $code
+     */
+    public function __construct(int $status = 500, bool $success = false, $data = null, $message = null, int $code = 0)
+    {
+        $this->status = $status;
+        $this->success = $success;
+        $this->data = $data;
+        $this->message = $message;
+        $this->code = $code;
+    }
 }

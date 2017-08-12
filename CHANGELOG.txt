@@ -1,3 +1,8 @@
+KkSeb/Http 1.x, 2017-08-12
+--------------------------
+- Slim service helper HttpServiceSlim.
+- This library, Http, must deliver Access-Control-Allow-Origin config setting.
+
 KkSeb/Http 1.x, 2017-08-11
 --------------------------
 - HttpClient/HttpRequest error handling complete.
