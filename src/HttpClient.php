@@ -168,7 +168,7 @@ class HttpClient
      *         'request_timeout' => 60,
      *     ]);
      * $response = $request->response;
-     * $validated_response = $request->validateResponse();
+     * $response = $request->validate()->response;
      * @endcode
      *
      * @param string $provider
