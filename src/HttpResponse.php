@@ -16,18 +16,22 @@ namespace KkSeb\Http;
 class HttpResponse
 {
     /**
-     * Status to be emitted to requestor.
+     * Status to be sent to requestor.
      *
      * @var int
      */
     public $status = 500;
 
     /**
+     * Headers to be sent to requestor.
+     *
      * @var array
      */
     public $headers = [];
 
     /**
+     * Body to be sent to requestor.
+     *
      * @var \KkSeb\Http\HttpResponseBody
      */
     public $body;

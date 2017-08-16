@@ -16,6 +16,11 @@ namespace KkSeb\Http;
 class HttpResponseBody
 {
     /**
+     * @var bool
+     */
+    public $success = false;
+
+    /**
      * The actual status.
      *
      * Allows making response body (like error message) available for frontend,
@@ -29,11 +34,6 @@ class HttpResponseBody
      * @var int
      */
     public $status = 500;
-
-    /**
-     * @var bool
-     */
-    public $success = false;
 
     /**
      * @var mixed|null
@@ -57,16 +57,16 @@ class HttpResponseBody
     /**
      * All parameters are optional.
      *
-     * @param int $status
      * @param bool $success
+     * @param int $status
      * @param mixed|null $data
      * @param string|null $message
      * @param int $code
      */
-    public function __construct(int $status = 500, bool $success = false, $data = null, $message = null, int $code = 0)
+    public function __construct(bool $success = false, int $status = 500, $data = null, $message = null, int $code = 0)
     {
-        $this->status = $status;
         $this->success = $success;
+        $this->status = $status;
         $this->data = $data;
         $this->message = $message;
         $this->code = $code;

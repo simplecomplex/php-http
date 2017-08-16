@@ -1,3 +1,20 @@
+KkSeb/Http 1.x, 2017-08-16
+--------------------------
+- HttpClient support HTTP method aliases index|retrieve (GET),
+  create (POST), update (PUT), delete (DELETE).
+- Args provider, service and endpoint must be lisp cased; underscore could break
+  configuration ini filename uniqueness, dot ditto for validation JSON filename.
+- Swapped sequence of HttpResponseBody success and status properties; success
+  is more important than status.
+- Response headers are now set as HttpRequest inst. var responseHeaders, instead
+  directly on HttpResponse; because HttpResponse->headers should be the headers
+  (if any) to be sent to requestor, not all remote headers indiscriminately.
+- Validation now only works on response body data, not on the whole response.
+  Because that would make for far too complex validation rule sets.
+  And the user of HttpClient can still investigate status and headers, prior
+  to running any body data validation.
+- Validation now supports variants; multiple validation rule sets.
+
 KkSeb/Http 1.x, 2017-08-12
 --------------------------
 - Slim service helper HttpServiceSlim.

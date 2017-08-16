@@ -10,14 +10,14 @@ namespace KkSeb\Http;
 
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
-use SimpleComplex\Utils\PathFileList;
+use SimpleComplex\Utils\PathFileListUnique;
 use SimpleComplex\RestMini\Client as RestMiniClient;
-use SimpleComplex\Validate\ValidationRuleSet;
 use KkSeb\Validate\Validate;
 use KkSeb\Cache\CacheBroker;
 use KkSeb\Http\Exception\HttpLogicException;
 use KkSeb\Http\Exception\HttpConfigurationException;
 use KkSeb\Http\Exception\HttpRequestException;
+use KkSeb\Http\Exception\HttpResponseException;
 use KkSeb\Http\Exception\HttpResponseValidationException;
 
 /**
@@ -84,6 +84,11 @@ class HttpRequest
      * @var \KkSeb\Http\HttpResponse
      */
     public $response;
+
+    /**
+     * @var array
+     */
+    public $responseHeaders = [];
 
     /**
      * @var int
@@ -377,10 +382,6 @@ class HttpRequest
             if (!$client_error) {
                 // Apparant success.
                 $status = $client->status();
-                $body = new HttpResponseBody();
-                $body->success = true;
-                $body->status = $status;
-                $body->data = $data;
                 // Do evaluate for:
                 // - unexpected status
                 // - require_response_headers
@@ -390,7 +391,11 @@ class HttpRequest
                     new HttpResponse(
                         $status,
                         !empty($this->options['get_headers']) ? $client->headers() : [],
-                        $body
+                        new HttpResponseBody(
+                            true,
+                            $status,
+                            $data
+                        )
                     ),
                     [],
                     // We do not need the info when RestMini Client reports error,
@@ -407,15 +412,19 @@ class HttpRequest
             if (!$status) {
                 $status = 500;
             }
-            $body = new HttpResponseBody();
-            $body->status = $status;
-            // Despite possibly boolean false.
-            $body->data = $data;
+            if (!empty($this->options['get_headers'])) {
+                $this->responseHeaders = $client->headers();
+            }
             $this->response = $this->evaluateResponse(
                 new HttpResponse(
                     $status,
-                    !empty($this->options['get_headers']) ? $client->headers() : [],
-                    $body
+                    [],
+                    new HttpResponseBody(
+                        false,
+                        $status,
+                        // Despite possibly boolean false.
+                        $data
+                    )
                 ),
                 $client_error
             );
@@ -663,224 +672,200 @@ class HttpRequest
     }
 
     /**
-     * @param array[] ...$records
-     *      Possibly more validation records, if tried against more rule sets.
+     * Validate response against one or more predefined validation rule sets.
+     *
+     * If more variant rule sets, the response will be checked against them
+     * in the received order, and validation stops at first pass.
+     * NB: do make sure that strict rule sets go before forgiving rule sets.
+     *
+     * Modifies response + response body if validation fails, setting:
+     * - 'code' to HttpClient error code 'response-validation'
+     * - 'success' to false
+     * - 'status' to 502 Bad Gateway (response only, not response body)
+     * - 'message'
+     * - 'data' to null
+     *
+     * @param string[] $variantRuleSets
+     *      Optional list of variant rule set names;
+     *      'default' means the base rule set.
+     * @param bool $noCache
+     *      Truthy: get rule set(s) directly from JSON file(s),
+     *      and do not cache the rule set(s).
+     *      Do not use this (truthy) in production; severy performance hit.
+     * @return HttpRequest
      */
-    public function setValidationFailed(array ...$records)
+    public function validate(array $variantRuleSets = [], bool $noCache = false) : HttpRequest
     {
-        // Log if simple validation failure, not some exception.
-        if ($this->code == HttpClient::ERROR_CODES['response-validation']) {
-            if ($records) {
-                $recorded =
-            }
+        if ($variantRuleSets) {
+            $rule_sets = array_fill_keys($variantRuleSets, null);
+        } else {
+            $rule_sets = [
+                'default' => null,
+            ];
+        }
 
-            $this->httpLogger->log(
-                LOG_ERR,
-                'Http response failed validation',
-                new HttpResponseValidationException(
-                    'Response evaluates to HttpClient error[response-validation].',
-                    $this->code + HttpClient::ERROR_CODE_OFFSET
-                ),
-                [
-                    'final status' => $response->status,
-                    'original status' => $original_status,
-                    'info' => $info ? $info :
-                        'see previous warning, type or subtype \'' . $this->properties['clientLogType'] . '\',',
-                    'response' => $response,
-                ]
-            );
+        $container = Dependency::container();
+
+        // Get cache even if arg noCache; truthy noCache should't be used
+        // in production.
+        /** @var CacheBroker $cache_broker */
+        $cache_broker = $container->get('cache-broker');
+        /** @var \KkSeb\Cache\PersistentFileCache $cache_store */
+        $rule_set_cache_store = $cache_broker->getStore(
+            'http-response_validation-rule-set',
+            CacheBroker::CACHE_PERSISTENT
+        );
+        unset($cache_broker);
+
+        $base_name = $this->properties['operation'];
+        $extension = '.validation-rule-set.json';
+        $read_filenames = $found_file_paths = $do_cache = [];
+        foreach ($rule_sets as $variant => &$rule_set) {
+            if (
+                $noCache
+                || !($rule_set = $rule_set_cache_store->get(
+                    $base_name . ($variant == 'default' ? '' : ('.' . $variant))
+                ))
+            ) {
+                $read_filenames[$variant] = 'http' . $base_name
+                    . ($variant == 'default' ? '' : ('.' . $variant)) . $extension;
+                $found_file_paths[$variant] = null;
+                if (!$noCache) {
+                    $do_cache[] = $variant;
+                }
+            }
+        }
+        // Iteration ref.
+        unset($rule_set);
+
+        if ($read_filenames) {
+            // Retrieve JSON files from validation rule set path.
+            $utils = Utils::getInstance();
+            $path = '';
+            try {
+                // Throws various exceptions.
+                $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
+                // Throws \InvalidArgumentException, \RuntimeException.
+                $files = (new PathFileListUnique($path, 'validation-rule-set.json'))->getArrayCopy();
+                foreach ($read_filenames as $variant => $filename) {
+                    if (isset($files[$filename])) {
+                        $found_file_paths[$variant] = $files[$filename];
+                        unset($read_filenames[$variant]);
+                    }
+                }
+                // All found?
+                if ($read_filenames) {
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http validate response',
+                        new HttpConfigurationException(
+                            get_class($this) . '::PATH_VALIDATION_RULE_SET path['
+                            . static::PATH_VALIDATION_RULE_SET . '] have no files of variants['
+                            . join(', ', array_keys($read_filenames)) . '] as children or descendants.',
+                            $this->code + HttpClient::ERROR_CODE_OFFSET
+                        ),
+                        $read_filenames
+                    );
+                }
+                else {
+                    // Read and parse them.
+                    foreach ($found_file_paths as $variant => $file_path) {
+                        $rule_sets[$variant] = $utils->parseJsonFile($file_path);
+                    }
+                }
+            } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
+                $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http validate response',
+                    new HttpConfigurationException(
+                        'A rule set JSON file is not parsable, see previous.',
+                        $this->code + HttpClient::ERROR_CODE_OFFSET,
+                        $xcptn
+                    )
+                );
+            } catch (\Throwable $xcptn) {
+                if (!$path) {
+                    $this->code = HttpClient::ERROR_CODES['local-algo'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http validate response',
+                        new HttpLogicException(
+                            get_class($this) . '::PATH_VALIDATION_RULE_SET path['
+                            . static::PATH_VALIDATION_RULE_SET . '] is not a valid path.',
+                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $xcptn
+                        )
+                    );
+                } else {
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http validate response',
+                        new HttpConfigurationException(
+                            'Some rule set JSON file is non-unique, non-existent or unreadable, see previous.',
+                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $xcptn
+                        )
+                    );
+                }
+            }
+        }
+
+        if (!$this->code) {
+            /** @var Validate $validate */
+            $validate = $container->has('validator') ? $container->get('validator') : new Validate();
+            $passed = false;
+            $records = [];
+            // Use rule sets by reference because Validate::challengeRecording()
+            // will convert them to ValidationRuleSets; which are faster.
+            foreach ($rule_sets as $variant => &$rule_set) {
+                $result = $validate->challengeRecording($this->response->body->data, $rule_set);
+                if ($result['passed']) {
+                    $passed = true;
+                    break;
+                }
+                $records[$variant] = $result['record'];
+            }
+            // Iteration ref.
+            unset($rule_set);
+
+            if (!$passed) {
+                $this->code = HttpClient::ERROR_CODES['response-validation'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http response',
+                    new HttpResponseValidationException(
+                        'Response failed validation.',
+                        $this->code + HttpClient::ERROR_CODE_OFFSET
+                    ),
+                    $records
+                );
+            }
+        }
+
+        if ($this->code) {
+            // Validation failure is 502 Bad Gateway.
+            // Error is 500 Internal Server Error.
+            $this->response->status = $this->response->body->status =
+                $this->code == HttpClient::ERROR_CODES['response-validation'] ? 502 : 500;
+
+            $this->response->body->code = $this->code;
+            // Clear body data.
+            $this->response->body->data = null;
             // Set body 'message'.
+            $code_names = array_flip(HttpClient::ERROR_CODES);
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = Dependency::container()->get('locale');
             $replacers = [
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
                 'app-title' => $this->properties['appTitle'],
             ];
-            $body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers);
-            switch ($code_names[$this->code]) {
-                case 'timeout':
-                case 'timeout-propagated':
-                    // User shan't report issue for 504 Gateway Timeout.
-                    break;
-                default:
-                    // Deliberately '\n' not "\n".
-                    $body->message .= '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
-            }
-
-            if ($records) {
-
-            }
+            $this->response->body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
+                // Deliberately '\n' not "\n".
+                . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
         }
-    }
-
-    /**
-     * @todo: quite unfinished.
-     *
-     * Validate response against a predefined or passed validation rule set.
-     *
-     * Modifies the response if validation fails.
-     *
-     * Uses cached validation rule set, if empty args
-     * ruleSet and ruleSetJsonPath.
-     *
-     * @param ValidationRuleSet|null $ruleSet
-     * @param string $ruleSetJsonPath
-     *      Path to directory containing JSON-formatted validation rule sets.
-     *      Absolute or relative to document root.
-     *      Filename will be
-     *      'http[provider][server][endpoint][METHOD].validation-rule-set.json'.
-     *
-     * @return $this|HttpRequest
-     */
-    public function validate($ruleSet = null, string $ruleSetJsonPath = '') : HttpRequest
-    {
-        // Don't validate upon failure.
-        if ($this->code) {
-            return $this;
-        }
-
-        // @todo: don't support arg $ruleSetJsonPath.
-        // @todo: do support arg array $variantNames, and allow that base name rule set doesn't exist at all.
-        // @todo: if $variantNames, try all variants and stop on first success.
-
-        $container = Dependency::container();
-        $utils = Utils::getInstance();
-
-        $failed = false;
-        $code = 0;
-        if ($ruleSet) {
-            $rule_set = $ruleSet;
-        } else {
-            $rule_set = null;
-            $filename = 'http' . $this->properties['operation'] . '.validation-rule-set.json';
-            if ($ruleSetJsonPath) {
-                try {
-                    // Throws various exceptions.
-                    $file = null;
-                    $path = $utils->resolvePath($ruleSetJsonPath);
-                    $file = $path . '/' . $filename;
-                    // Throws Utils ParseJsonException and \RuntimeException.
-                    $rule_set = $utils->parseJsonFile($file);
-                } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
-                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http validate response',
-                        new \InvalidArgumentException(
-                            'Arg ruleSetJsonPath[' . $ruleSetJsonPath . '] file[' . $file
-                            . '] is not parsable, see previous.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET,
-                            $xcptn
-                        )
-                    );
-                } catch (\Throwable $xcptn) {
-                    $this->code = HttpClient::ERROR_CODES['local-use'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http validate response',
-                        new \InvalidArgumentException(
-                            'Arg ruleSetJsonPath[' . $ruleSetJsonPath . ']'
-                            . (!$file ? ' is not a valid path.' :
-                                (' file[' . $file . '] is non-existent or unreadable, see previous.')
-                            ),
-                            $this->code + HttpClient::ERROR_CODE_OFFSET,
-                            $xcptn
-                        )
-                    );
-                }
-            }
-            else {
-                /** @var CacheBroker $cache_broker */
-                $cache_broker = $container->get('cache-broker');
-                /** @var \KkSeb\Cache\PersistentFileCache $cache_store */
-                $rule_set_cache_store = $cache_broker->getStore(
-                    'http-response_validation-rule-set',
-                    CacheBroker::CACHE_PERSISTENT
-                );
-                unset($cache_broker);
-                $rule_set = $rule_set_cache_store->get($this->properties['operation']);
-                if (!$rule_set) {
-                    // Retrieve JSON file from validation rule set path.
-                    $path = $file = '';
-                    try {
-                        // Throws various exceptions.
-                        $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
-                        // Throws \InvalidArgumentException.
-                        $files = (new PathFileList($path, 'validation-rule-set.json'))->getArrayCopy();
-                        foreach ($files as $path_file) {
-                            if (strpos($path_file, '/' . $filename)) {
-                                $file = $path_file;
-                                break;
-                            }
-                        }
-                        if (!$file) {
-                            $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                            $this->httpLogger->log(
-                                LOG_ERR,
-                                'Http validate response',
-                                new HttpConfigurationException(
-                                    get_class($this) . '::PATH_VALIDATION_RULE_SET path['
-                                    . static::PATH_VALIDATION_RULE_SET . '] has no file name[' . $filename
-                                    . '] as child or descendant.',
-                                    $this->code + HttpClient::ERROR_CODE_OFFSET
-                                )
-                            );
-                        } else {
-                            // Throws Utils ParseJsonException and \RuntimeException.
-                            $rule_set = $utils->parseJsonFile($file);
-                        }
-                    } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
-                        $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                        $this->httpLogger->log(
-                            LOG_ERR,
-                            'Http validate response',
-                            new HttpConfigurationException(
-                                'File[' . $file . '] is not parsable, see previous.',
-                                $this->code + HttpClient::ERROR_CODE_OFFSET,
-                                $xcptn
-                            )
-                        );
-                    } catch (\Throwable $xcptn) {
-                        if (!$path) {
-                            $this->code = HttpClient::ERROR_CODES['local-algo'];
-                            $this->httpLogger->log(
-                                LOG_ERR,
-                                'Http validate response',
-                                new HttpLogicException(
-                                    get_class($this) . '::PATH_VALIDATION_RULE_SET path['
-                                    . static::PATH_VALIDATION_RULE_SET . '] is not a valid path.',
-                                    $this->code + HttpClient::ERROR_CODE_OFFSET,
-                                    $xcptn
-                                )
-                            );
-                        } else {
-                            $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                            $this->httpLogger->log(
-                                LOG_ERR,
-                                'Http validate response',
-                                new HttpConfigurationException(
-                                    'File[' . $file . '] is non-existent or unreadable, see previous.',
-                                    $this->code + HttpClient::ERROR_CODE_OFFSET,
-                                    $xcptn
-                                )
-                            );
-                        }
-                    }
-                    if (!$this->code && $rule_set) {
-                        $validator = $container->has('validator') ? $container->get('validator') : new Validate();
-
-                    }
-
-
-                    // @todo: using PathFileList.
-                    /**
-                     * @see PathFileList
-                     */
-                    // @todo: and the cache the rule set.
-                }
-            }
-        }
-
 
         return $this;
     }

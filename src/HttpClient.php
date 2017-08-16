@@ -172,9 +172,9 @@ class HttpClient
      * @endcode
      *
      * @param string $provider
-     *      Name [a-zA-Z][a-zA-Z\d_\-]*
+     *      Lisp cased [a-zA-Z][a-zA-Z\d\-]*
      * @param string $service
-     *      Name [a-zA-Z][a-zA-Z\d_\-]*
+     *      Lisp cased [a-zA-Z][a-zA-Z\d\-]*
      * @param string $appTitle
      *      Default: localeText http:app-title.
      *
@@ -237,9 +237,10 @@ class HttpClient
 
     /**
      * @param string $endpoint
-     *      Name [a-zA-Z][a-zA-Z\d_\-]*
+     *      Lisp cased [a-zA-Z][a-zA-Z\d\-]*
      * @param string $method
-     *      HEAD|GET|POST|PUT|DELETE.
+     *      HEAD|GET|POST|PUT|DELETE or alias index|retrieve (GET),
+     *      create (POST), update (PUT), delete (DELETE).
      * @param array $arguments {
      *      @var array $path  Optional.
      *      @var array $query  Optional.
@@ -277,15 +278,32 @@ class HttpClient
             return new HttpRequest($properties, [], [], $this->initError->getCode() - static::ERROR_CODE_OFFSET);
         }
 
-        // HTTP method supported.
-        if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
-            $code = static::ERROR_CODES['local-use'];
-            $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
-                'Client abort, request() arg method[' . $method . '] is not among supported methods '
-                . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
-                $code + static::ERROR_CODE_OFFSET
-            ));
-            return new HttpRequest($properties, [], [], $code);
+        // Support HTTP method aliases.
+        switch ($method) {
+            case 'index':
+            case 'retrieve':
+                $properties['method'] = 'GET';
+                break;
+            case 'create':
+                $properties['method'] = 'POST';
+                break;
+            case 'update':
+                $properties['method'] = 'PUT';
+                break;
+            case 'delete':
+                $properties['method'] = 'DELETE';
+                break;
+            default:
+                // HTTP methods supported.
+                if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
+                    $code = static::ERROR_CODES['local-use'];
+                    $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
+                        'Client abort, request() arg method[' . $method . '] is not among supported methods '
+                        . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
+                        $code + static::ERROR_CODE_OFFSET
+                    ));
+                    return new HttpRequest($properties, [], [], $code);
+                }
         }
 
         // Config section: http-service_kki_seb-personale_cpr.
