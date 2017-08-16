@@ -43,7 +43,7 @@ class HttpRequest
      *
      * @var string
      */
-    const PATH_VALIDATION_RULE_SET = '../conf/json/http/response_validation-rule-sets';
+    const PATH_VALIDATION_RULE_SET = '../conf/json/http-response_validation-rule-sets';
 
     /**
      * Options supported:
