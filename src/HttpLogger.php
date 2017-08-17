@@ -50,7 +50,7 @@ class HttpLogger
     {
         $container = Dependency::container();
         /** @var \SimpleComplex\Inspect\Inspect $inspect */
-        $inspect = $container->get('inspector');
+        $inspect = $container->get('inspect');
 
         $context = [
             'type' => $this->type,
