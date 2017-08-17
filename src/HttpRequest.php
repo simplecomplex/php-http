@@ -815,7 +815,7 @@ class HttpRequest
 
         if (!$this->code) {
             /** @var Validate $validate */
-            $validate = $container->has('validator') ? $container->get('validator') : new Validate();
+            $validate = $container->has('validate') ? $container->get('validate') : new Validate();
             $passed = false;
             $records = [];
             // Use rule sets by reference because Validate::challengeRecording()
