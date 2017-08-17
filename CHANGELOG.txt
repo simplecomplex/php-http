@@ -2,6 +2,10 @@ KkSeb/Http 1.x, 2017-08-17
 --------------------------
 - Dot-separated operation name; provider.service.endpoint.METHODorAlias.
 - Service ini config names dot-separated.
+- HttpRequest set response headers X-KkSeb-Http-Original-Status
+  and X-KkSeb-Http-Final-Status.
+  The 'final' status will always be set; the 'original' status may not be set
+  if the request failed without contact with remote service.
 
 KkSeb/Http 1.x, 2017-08-16
 --------------------------

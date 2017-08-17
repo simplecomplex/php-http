@@ -382,6 +382,9 @@ class HttpRequest
             if (!$client_error) {
                 // Apparant success.
                 $status = $client->status();
+                if (!empty($this->options['get_headers'])) {
+                    $this->responseHeaders = $client->headers();
+                }
                 // Do evaluate for:
                 // - unexpected status
                 // - require_response_headers
@@ -390,7 +393,11 @@ class HttpRequest
                 $this->response = $this->evaluateResponse(
                     new HttpResponse(
                         $status,
-                        !empty($this->options['get_headers']) ? $client->headers() : [],
+                        [
+                            'X-KkSeb-Http-Original-Status' => $status,
+                            // evaluateResponse() may override final status.
+                            'X-KkSeb-Http-Final-Status' => $status,
+                        ],
                         new HttpResponseBody(
                             true,
                             $status,
@@ -411,6 +418,12 @@ class HttpRequest
             // Status will be zero it RestMini Client failed to init connection.
             if (!$status) {
                 $status = 500;
+                // No original status; however evaluateResponse() might set it.
+                $return_headers = [];
+            } else {
+                $return_headers = [
+                    'X-KkSeb-Http-Original-Status' => $status,
+                ];
             }
             if (!empty($this->options['get_headers'])) {
                 $this->responseHeaders = $client->headers();
@@ -418,7 +431,7 @@ class HttpRequest
             $this->response = $this->evaluateResponse(
                 new HttpResponse(
                     $status,
-                    [],
+                    $return_headers,
                     new HttpResponseBody(
                         false,
                         $status,
@@ -529,6 +542,7 @@ class HttpRequest
                     break;
                 case 'request_timed_out':
                     // 504 Gateway Timeout.
+                    $response->headers['X-KkSeb-Http-Original-Status'] =
                     $response->status = $body->status = 504;
                     $this->code = HttpClient::ERROR_CODES['timeout'];
                     break;
@@ -536,6 +550,7 @@ class HttpRequest
                 case 'connection_failed':
                     // 502 Bad Gateway.
                     // Perhaps upon retry (option: 'retry_on_unavailable').
+                    $response->headers['X-KkSeb-Http-Original-Status'] =
                     $response->status = $body->status = 502;
                     $this->code = HttpClient::ERROR_CODES['host-unavailable'];
                     break;
@@ -570,6 +585,7 @@ class HttpRequest
                     $response->status = $body->status = 500;
                     $this->code = HttpClient::ERROR_CODES['unknown'];
             }
+            $response->headers['X-KkSeb-Http-Final-Status'] = $response->status;
             // Set body 'code'.
             $body->code = $this->code;
         }
@@ -626,6 +642,7 @@ class HttpRequest
                     $body->success = false;
                     // Unexpecteds; set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
+                    $response->headers['X-KkSeb-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['benign-status-unexpected'];
             }
@@ -848,6 +865,7 @@ class HttpRequest
         if ($this->code) {
             // Validation failure is 502 Bad Gateway.
             // Error is 500 Internal Server Error.
+            $this->response->headers['X-KkSeb-Http-Final-Status'] =
             $this->response->status = $this->response->body->status =
                 $this->code == HttpClient::ERROR_CODES['response-validation'] ? 502 : 500;
 
