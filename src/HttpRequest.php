@@ -106,7 +106,7 @@ class HttpRequest
     /**
      * @var array {
      *      @var string $method  METHOD
-     *      @var string $operation  [provider][server][endpoint][METHOD]
+     *      @var string $operation  provider.server.endpoint.METHODorAlias
      *      @var string $appTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }
@@ -164,7 +164,7 @@ class HttpRequest
      *
      * @param array $properties {
      *      @var string $method  METHOD
-     *      @var string $operation  [provider][server][endpoint][METHOD]
+     *      @var string $operation  provider.server.endpoint.METHODorAlias
      *      @var string $appTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }

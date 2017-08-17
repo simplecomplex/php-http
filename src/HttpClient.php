@@ -172,34 +172,49 @@ class HttpClient
      * @endcode
      *
      * @param string $provider
-     *      Lisp cased [a-zA-Z][a-zA-Z\d\-]*
+     *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $service
-     *      Lisp cased [a-zA-Z][a-zA-Z\d\-]*
+     *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $appTitle
      *      Default: localeText http:app-title.
      *
      * @uses HttpConfigurationException
      *      Un-configured provider or service.
+     * @throws \InvalidArgumentException
+     *      If arg provider or server contains dot.
      * @throws \Throwable
      *      Propagated; unlikely errors (dependency injection container, config)
      *      normally detected prior to creating a HttpClient.
      */
     public function __construct(string $provider, string $service, string $appTitle = '')
     {
+        if (strpos($provider, '.') !== false) {
+            throw new \InvalidArgumentException(
+                'Arg provider name is invalid.',
+                static::ERROR_CODES['local-use'] + static::ERROR_CODE_OFFSET
+            );
+        }
         $this->provider = $provider;
+
+        if (strpos($service, '.') !== false) {
+            throw new \InvalidArgumentException(
+                'Arg service name is invalid.',
+                static::ERROR_CODES['local-use'] + static::ERROR_CODE_OFFSET
+            );
+        }
         $this->service = $service;
 
-        $this->operation = '[' . $provider . '][' . $service . ']';
+        $this->operation = $provider . '.' . $service;
 
         $container = Dependency::container();
         /** @var \KkSeb\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
 
         // Config section: http-provider_kki.
-        if (!($conf_provider = $this->config->get('http-provider_' . $provider, '*'))) {
+        if (!($conf_provider = $this->config->get('http-provider.' . $provider, '*'))) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg provider[' . $provider . '] global config section['
-                . 'http-provider_' . $provider . '] is not configured.',
+                . 'http-provider.' . $provider . '] is not configured.',
                 static::ERROR_CODES['local-configuration'] + static::ERROR_CODE_OFFSET
             );
         } elseif (!empty($conf_provider['cacheable'])) {
@@ -210,10 +225,10 @@ class HttpClient
             );
         }
         // Config section: http-service_kki_seb-personale.
-        elseif (!($conf_service = $this->config->get('http-service_' . $provider . '_' . $service, '*'))) {
+        elseif (!($conf_service = $this->config->get('http-service.' . $provider . '.' . $service, '*'))) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg service[' . $provider . '] global config section['
-                . 'http-service_' . $provider . '_' . $service . '] is not configured.',
+                . 'http-service.' . $provider . '.' . $service . '] is not configured.',
                 static::ERROR_CODES['local-configuration'] + static::ERROR_CODE_OFFSET
             );
         } elseif (!empty($conf_service['cacheable'])) {
@@ -237,8 +252,8 @@ class HttpClient
 
     /**
      * @param string $endpoint
-     *      Lisp cased [a-zA-Z][a-zA-Z\d\-]*
-     * @param string $method
+     *      Name [a-zA-Z][a-zA-Z\d_\-]*
+     * @param string $methodOrAlias
      *      HEAD|GET|POST|PUT|DELETE or alias index|retrieve (GET),
      *      create (POST), update (PUT), delete (DELETE).
      * @param array $arguments {
@@ -257,16 +272,25 @@ class HttpClient
      *      Arg method not supported.
      *      Parameters are neither nested in numerically indexed buckets
      *      nor path|query|body bucket(s).
+     * @throws \InvalidArgumentException
+     *      If arg provider or server contains dot.
      * @throws \Throwable
      *      Propagated; unlikely errors (dependency injection container, config)
      *      normally detected prior to creating a HttpClient.
      */
-    public function request(string $endpoint, string $method, array $arguments, array $options = []) : HttpRequest
+    public function request(string $endpoint, string $methodOrAlias, array $arguments, array $options = []) : HttpRequest
     {
-        $this->operation .= '[' . $endpoint . '][' . $method . ']';
+        if (strpos($endpoint, '.') !== false) {
+            throw new \InvalidArgumentException(
+                'Arg endpoint name is invalid.',
+                static::ERROR_CODES['local-use'] + static::ERROR_CODE_OFFSET
+            );
+        }
+
+        $this->operation .= $endpoint . '.' . $methodOrAlias;
         $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
         $properties = [
-            'method' => $method,
+            'method' => $methodOrAlias,
             'operation' => $this->operation,
             'appTitle' => $this->appTitle,
             'httpLogger' => $this->httpLogger,
@@ -279,7 +303,7 @@ class HttpClient
         }
 
         // Support HTTP method aliases.
-        switch ($method) {
+        switch ($methodOrAlias) {
             case 'index':
             case 'retrieve':
                 $properties['method'] = 'GET';
@@ -295,10 +319,10 @@ class HttpClient
                 break;
             default:
                 // HTTP methods supported.
-                if (!in_array($method, RestMiniClient::METHODS_SUPPORTED, true)) {
+                if (!in_array($methodOrAlias, RestMiniClient::METHODS_SUPPORTED, true)) {
                     $code = static::ERROR_CODES['local-use'];
                     $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
-                        'Client abort, request() arg method[' . $method . '] is not among supported methods '
+                        'Client abort, request() arg method[' . $methodOrAlias . '] is not among supported methods '
                         . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
                         $code + static::ERROR_CODE_OFFSET
                     ));
@@ -308,12 +332,12 @@ class HttpClient
 
         // Config section: http-service_kki_seb-personale_cpr.
         if (!($conf_endpoint = $this->config->get(
-            'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint, '*')
+            'http-endpoint.' . $this->provider . '.' . $this->service . '.' . $endpoint, '*')
         )) {
             $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
-                . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '] is not configured.',
+                . 'http-endpoint.' . $this->provider . '.' . $this->service . '.' . $endpoint . '] is not configured.',
                 $code + static::ERROR_CODE_OFFSET
             ));
             return new HttpRequest($properties, [], [], $code);
@@ -328,16 +352,11 @@ class HttpClient
         }
         // Config section: http-service_kki_seb-personale_cpr_GET.
         // Method configuration is allowed to empty array.
-        if (
-            ($conf_method = $this->config->get(
-                'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method, '*')
-            ) === null
-        ) {
+        if (($conf_method = $this->config->get('http-method.' . $this->operation, '*')) === null) {
             $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
-                . 'http-service_' . $this->provider . '_' . $this->service . '_' . $endpoint . '_' . $method
-                . '] is not configured.',
+                . 'http-method.' . $this->operation . '] is not configured.',
                 $code + static::ERROR_CODE_OFFSET
             ));
             return new HttpRequest($properties, [], [], $code);

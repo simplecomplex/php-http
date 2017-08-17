@@ -1,3 +1,8 @@
+KkSeb/Http 1.x, 2017-08-17
+--------------------------
+- Dot-separated operation name; provider.service.endpoint.METHODorAlias.
+- Service ini config names dot-separated.
+
 KkSeb/Http 1.x, 2017-08-16
 --------------------------
 - HttpClient support HTTP method aliases index|retrieve (GET),
