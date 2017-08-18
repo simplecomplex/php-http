@@ -287,7 +287,7 @@ class HttpClient
             );
         }
 
-        $this->operation .= $endpoint . '.' . $methodOrAlias;
+        $this->operation .= '.' . $endpoint . '.' . $methodOrAlias;
         $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
         $properties = [
             'method' => $methodOrAlias,

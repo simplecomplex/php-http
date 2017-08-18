@@ -260,11 +260,11 @@ class HttpRequest
     protected function execute() /*: void*/
     {
         $base_url = $this->options['base_url'];
-        $endpoint_path = $this->options['endpoint_path'];
+        $endpoint_path = $this->options['service_path'] . '/' . $this->options['endpoint_path'];
 
         // Filter non-RestMini Client options off,
         // even option not supported at all.
-        $client_options = array_intersect_assoc(
+        $client_options = array_intersect_key(
             $this->options,
             array_fill_keys(RestMiniClient::OPTIONS_SUPPORTED, true)
         );
