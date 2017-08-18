@@ -1,3 +1,11 @@
+KkSeb/Http 1.x, 2017-08-18
+--------------------------
+- Set remote response headers on HttpResponse instead of on HttpRequest.
+- Set 'validated' on HttpResponse instead of on HttpRequest.
+- Cacheable response must be saved to cache on access/retrieval;
+  as late as possible.
+- Set iso-8601 date header X-KkSeb-Http-Cache-Time on response when caching.
+
 KkSeb/Http 1.x, 2017-08-17
 --------------------------
 - Dot-separated operation name; provider.service.endpoint.METHODorAlias.

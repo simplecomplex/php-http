@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileListUnique;
@@ -25,10 +26,83 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
  *
  * @internal
  *
+ * @property-read \KkSeb\Http\HttpResponse $response
+ *
  * @package KkSeb\Http
  */
-class HttpRequest
+class HttpRequest extends Explorable
 {
+    // Explorable.--------------------------------------------------------------
+
+    /**
+     * @var array
+     */
+    protected $explorableIndex = [
+        'response',
+        'code',
+        'aborted',
+        'options',
+        'arguments',
+    ];
+
+    /**
+     * @param string $name
+     *
+     * @return mixed
+     *
+     * @throws \OutOfBoundsException
+     *      If no such instance property.
+     */
+    public function __get($name)
+    {
+        if ($name == 'response' && $this->response) {
+            // Save to cache if evaluateResponse() and/or validate() says so.
+            // If user retrieves response twice (before and after validation)
+            // response might
+            if ($this->saveToCache) {
+                $this->response->headers['X-KkSeb-Http-Cache-Time'] = date('c');
+                if (!$this->responseCacheStore) {
+                    $container = Dependency::container();
+                    /** @var CacheBroker $cache_broker */
+                    $cache_broker = $container->get('cache-broker');
+                    /** @var \KkSeb\Cache\FileCache $cache_store */
+                    $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
+                        'ttlDefault' => static::CACHEABLE_TIME_TO_LIVE,
+                    ]);
+                    unset($cache_broker);
+                }
+                $this->responseCacheStore->set($this->cacheable['id'], $this->response, $this->cacheable['ttl']);
+            }
+            return $this->response;
+        }
+        elseif (in_array($name, $this->explorableIndex, true)) {
+            return $this->{$name};
+        }
+        throw new \OutOfBoundsException(get_class($this) . ' instance exposes no property[' . $name . '].');
+    }
+
+    /**
+     * @param string $name
+     * @param mixed|null $value
+     *
+     * @return void
+     *
+     * @throws \OutOfBoundsException
+     *      If no such instance property.
+     * @throws \RuntimeException
+     *      If that instance property is read-only.
+     */
+    public function __set($name, $value) /*: void*/
+    {
+        if (in_array($name, $this->explorableIndex, true)) {
+            throw new \RuntimeException(get_class($this) . ' instance property[' . $name . '] is read-only.');
+        }
+        throw new \OutOfBoundsException(get_class($this) . ' instance exposes no property[' . $name . '].');
+    }
+
+
+    // Business.----------------------------------------------------------------
+
     /**
      * Default cacheable time-to-live.
      *
@@ -67,6 +141,8 @@ class HttpRequest
         'debug_dump',
         // bool|array.
         'cacheable',
+        // bool|array.
+        'validate_response',
         // int; milliseconds.
         'retry_on_unavailable',
         // array.
@@ -78,40 +154,22 @@ class HttpRequest
     ];
 
 
-    // Public members.----------------------------------------------------------
+    // Read-only members.-------------------------------------------------------
 
     /**
      * @var \KkSeb\Http\HttpResponse
      */
-    public $response;
-
-    /**
-     * @var array
-     */
-    public $responseHeaders = [];
+    protected $response;
 
     /**
      * @var int
      */
-    public $code = 0;
+    protected $code = 0;
 
     /**
      * @var bool
      */
-    public $aborted = false;
-
-
-    // Protected members.-------------------------------------------------------
-
-    /**
-     * @var array {
-     *      @var string $method  METHOD
-     *      @var string $operation  provider.server.endpoint.METHODorAlias
-     *      @var string $appTitle  Localized application title.
-     *      @var HttpLogger $httpLogger
-     * }
-     */
-    protected $properties;
+    protected $aborted = false;
 
     /**
      * This class' options + RestMini Client's options.
@@ -126,7 +184,17 @@ class HttpRequest
     protected $arguments;
 
 
-    // This class own options.--------------------------------------------------
+    // Various internal members.------------------------------------------------
+
+    /**
+     * @var array {
+     *      @var string $method  METHOD
+     *      @var string $operation  provider.server.endpoint.METHODorAlias
+     *      @var string $appTitle  Localized application title.
+     *      @var HttpLogger $httpLogger
+     * }
+     */
+    protected $properties;
 
     /**
      * @var bool|null
@@ -141,6 +209,14 @@ class HttpRequest
      * }
      */
     protected $cacheable = [];
+
+    /**
+     * Whether - on access/retrieval of the read-only response
+     * - to save the response to cache.
+     *
+     * @var bool
+     */
+    protected $saveToCache = false;
 
 
     // Helpers.-----------------------------------------------------------------
@@ -204,19 +280,23 @@ class HttpRequest
             $chbl = $options['cacheable'];
             $this->cacheable = [
                 'ttl' => static::CACHEABLE_TIME_TO_LIVE,
-                'id' => $properties['operation'] . 'user-',
+                'id' => $properties['operation'] . '[user-',
                 'refresh' => false,
             ];
             if ($chbl === true) {
-                $this->cacheable['id'] .= 'userIdent'; // @todo: get brugerIdent.
+                $this->cacheable['id'] .= 'userIdent' . ']'; // @todo: get brugerIdent.
             } else {
                 if (!empty($chbl['ttl'])) {
                     $this->cacheable['ttl'] = $chbl['ttl'];
                 }
                 if (!empty($chbl['anybody'])) {
-                    $this->cacheable['id'] .= '.';
+                    /**
+                     * Use dot for wildcard user, because cache doesn't allow *
+                     * @see \SimpleComplex\Cache\CacheKey::VALID_NON_ALPHANUM
+                     */
+                    $this->cacheable['id'] .= '.]';
                 } else {
-                    $this->cacheable['id'] .= 'userIdent'; // @todo: get brugerIdent.
+                    $this->cacheable['id'] .= 'userIdent' . ']'; // @todo: get brugerIdent.
                 }
                 if (!empty($chbl['refresh'])) {
                     $this->cacheable['refresh'] = true;
@@ -242,9 +322,13 @@ class HttpRequest
                     $this->response = $cached_response;
                     // Do not evaluate cached response. Assume that response headers
                     // and 204|404 checks are the same as last time.
+                    // Do not validate cached response. Assume that validation
+                    // rule set(s) are the same as last time.
                     return;
                 }
             }
+            // Make sure to cache response on retrieval.
+            $this->saveToCache = true;
         }
 
         $this->execute();
@@ -382,9 +466,6 @@ class HttpRequest
             if (!$client_error) {
                 // Apparant success.
                 $status = $client->status();
-                if (!empty($this->options['get_headers'])) {
-                    $this->responseHeaders = $client->headers();
-                }
                 // Do evaluate for:
                 // - unexpected status
                 // - require_response_headers
@@ -402,7 +483,8 @@ class HttpRequest
                             true,
                             $status,
                             $data
-                        )
+                        ),
+                        !empty($this->options['get_headers']) ? $client->headers() : []
                     ),
                     [],
                     // We do not need the info when RestMini Client reports error,
@@ -425,9 +507,6 @@ class HttpRequest
                     'X-KkSeb-Http-Original-Status' => $status,
                 ];
             }
-            if (!empty($this->options['get_headers'])) {
-                $this->responseHeaders = $client->headers();
-            }
             $this->response = $this->evaluateResponse(
                 new HttpResponse(
                     $status,
@@ -437,7 +516,8 @@ class HttpRequest
                         $status,
                         // Despite possibly boolean false.
                         $data
-                    )
+                    ),
+                    !empty($this->options['get_headers']) ? $client->headers() : []
                 ),
                 $client_error
             );
@@ -594,6 +674,8 @@ class HttpRequest
             // Arg $info will be non-empty, and if option 'record_args'
             // $info even contains the request arguments sent.
 
+            // @todo: do 'require_response_headers' check.
+
             // Every status but 200|201|204|304|404 is considered malign.
             switch ($original_status) {
                 case 200:
@@ -683,6 +765,9 @@ class HttpRequest
                     // Deliberately '\n' not "\n".
                     $body->message .= '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
             }
+        } elseif ($this->cacheable) {
+            // Do save successful response to cache, on access/retrieval.
+            $this->saveToCache = true;
         }
 
         return $response;
@@ -713,6 +798,12 @@ class HttpRequest
      */
     public function validate(array $variantRuleSets = [], bool $noCache = false) : HttpRequest
     {
+        // Can't validate twice, because this method sets response body data
+        // to null on validation failure.
+        if ($this->response->validated !== null) {
+            return $this;
+        }
+
         if ($variantRuleSets) {
             $rule_sets = array_fill_keys($variantRuleSets, null);
         } else {
@@ -863,6 +954,9 @@ class HttpRequest
         }
 
         if ($this->code) {
+            // Flag that response has been validated, and failed.
+            $this->response->validated = false;
+
             // Validation failure is 502 Bad Gateway.
             // Error is 500 Internal Server Error.
             $this->response->headers['X-KkSeb-Http-Final-Status'] =
@@ -883,6 +977,13 @@ class HttpRequest
             $this->response->body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
                 . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
+        }
+        elseif ($this->cacheable) {
+            // Flag that response has been validated, and passed.
+            $this->response->validated = true;
+
+            // Do save successful response to cache, on access/retrieval.
+            $this->saveToCache = true;
         }
 
         return $this;
