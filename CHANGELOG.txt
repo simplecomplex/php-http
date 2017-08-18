@@ -5,6 +5,14 @@ KkSeb/Http 1.x, 2017-08-18
 - Cacheable response must be saved to cache on access/retrieval;
   as late as possible.
 - Set iso-8601 date header X-KkSeb-Http-Cache-Time on response when caching.
+- - - -
+- Validation has to be executed privately; otherwise double response
+  access/retrieval (before and after validation) could result in bad
+  (unvalidated) cache - cached before validation, what to do upon bad
+  validation (cache deletion would not secure that other requestors don't
+  get bad response in the meantime).
+- Setting/option validate_response is the way to command validation.
+- Implemented require_response_headers check.
 
 KkSeb/Http 1.x, 2017-08-17
 --------------------------

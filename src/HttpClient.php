@@ -103,7 +103,8 @@ class HttpClient
         // Unsupported non-5xx status.
         'benign-status-unexpected' => 89,
 
-        'response-validation' => 90,
+        'header-missing' => 90,
+        'response-validation' => 95,
     ];
 
     /**

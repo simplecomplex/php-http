@@ -27,6 +27,10 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
  * @internal
  *
  * @property-read \KkSeb\Http\HttpResponse $response
+ * @property-read int $code
+ * @property-read bool $aborted
+ * @property-read array $options
+ * @property-read array $arguments
  *
  * @package KkSeb\Http
  */
@@ -55,27 +59,7 @@ class HttpRequest extends Explorable
      */
     public function __get($name)
     {
-        if ($name == 'response' && $this->response) {
-            // Save to cache if evaluateResponse() and/or validate() says so.
-            // If user retrieves response twice (before and after validation)
-            // response might
-            if ($this->saveToCache) {
-                $this->response->headers['X-KkSeb-Http-Cache-Time'] = date('c');
-                if (!$this->responseCacheStore) {
-                    $container = Dependency::container();
-                    /** @var CacheBroker $cache_broker */
-                    $cache_broker = $container->get('cache-broker');
-                    /** @var \KkSeb\Cache\FileCache $cache_store */
-                    $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
-                        'ttlDefault' => static::CACHEABLE_TIME_TO_LIVE,
-                    ]);
-                    unset($cache_broker);
-                }
-                $this->responseCacheStore->set($this->cacheable['id'], $this->response, $this->cacheable['ttl']);
-            }
-            return $this->response;
-        }
-        elseif (in_array($name, $this->explorableIndex, true)) {
+        if (in_array($name, $this->explorableIndex, true)) {
             return $this->{$name};
         }
         throw new \OutOfBoundsException(get_class($this) . ' instance exposes no property[' . $name . '].');
@@ -122,6 +106,7 @@ class HttpRequest extends Explorable
     /**
      * Options supported:
      * - (bool|arr) cacheable
+     * - (bool|arr) validate_response: do validate response against rule set(s)
      * - (arr) require_response_headers: list of response header keys required
      * - (bool) err_on_endpoint_not_found: 404 + HTML
      * - (bool) err_on_resource_not_found: 204, 404 + JSON
@@ -130,6 +115,11 @@ class HttpRequest extends Explorable
      * - (int) ttl: time-to-live, default CACHEABLE_TIME_TO_LIVE
      * - refresh: retrieve new response and cache it, default not
      * - anybody: for any user, default current user only
+     *
+     * The validate_response option as array:
+     * - (str) rule_set_variants: comma-separated list of variant names,
+     *   'default' meaning the default non-variant rule set
+     * - (bool) no_cache_rules: do (not) cache the (JSON-derived) rule set(s)
      *
      * See also underlying client's supported methods.
      * @see \SimpleComplex\RestMini\Client::OPTIONS_SUPPORTED
@@ -211,12 +201,12 @@ class HttpRequest extends Explorable
     protected $cacheable = [];
 
     /**
-     * Whether - on access/retrieval of the read-only response
-     * - to save the response to cache.
-     *
-     * @var bool
+     * @var array {
+     *      @var string $rule_set_variants
+     *      @var bool $no_cache_rules
+     * }
      */
-    protected $saveToCache = false;
+    protected $validateResponse = [];
 
 
     // Helpers.-----------------------------------------------------------------
@@ -302,6 +292,7 @@ class HttpRequest extends Explorable
                     $this->cacheable['refresh'] = true;
                 }
             }
+            unset($chbl);
             $container = Dependency::container();
             /** @var CacheBroker $cache_broker */
             $cache_broker = $container->get('cache-broker');
@@ -327,8 +318,23 @@ class HttpRequest extends Explorable
                     return;
                 }
             }
-            // Make sure to cache response on retrieval.
-            $this->saveToCache = true;
+        }
+
+        if (!empty($this->options['validate_response'])) {
+            $vldrspns = $this->options['validate_response'];
+            $this->validateResponse = [
+                'variant_rule_sets' => 'default',
+                'no_cache_rules' => false,
+            ];
+            if (is_array($vldrspns)) {
+                if (!empty($vldrspns['variant_rule_sets'])) {
+                    $this->validateResponse['variant_rule_sets'] = $vldrspns['variant_rule_sets'];
+                }
+                if (!empty($vldrspns['no_cache_rules'])) {
+                    $this->validateResponse['no_cache_rules'] = true;
+                }
+            }
+            unset($vldrspns);
         }
 
         $this->execute();
@@ -674,8 +680,6 @@ class HttpRequest extends Explorable
             // Arg $info will be non-empty, and if option 'record_args'
             // $info even contains the request arguments sent.
 
-            // @todo: do 'require_response_headers' check.
-
             // Every status but 200|201|204|304|404 is considered malign.
             switch ($original_status) {
                 case 200:
@@ -729,6 +733,23 @@ class HttpRequest extends Explorable
                     $this->code = HttpClient::ERROR_CODES['benign-status-unexpected'];
             }
         }
+
+        // Require response headers.
+        if (!$this->code && !empty($this->options['require_response_headers'])) {
+            $headers_required =& $this->options['require_response_headers'];
+            foreach ($headers_required as $header) {
+                if (!isset($response->headers[$header])) {
+                    $body->success = false;
+                    // Set to Bad Gateway, not our fault.
+                    // But keep the the original status on $body->status.
+                    $response->headers['X-KkSeb-Http-Final-Status'] =
+                    $response->status = 502;
+                    $this->code = HttpClient::ERROR_CODES['header-missing'];
+                    break;
+                }
+            }
+        }
+
         // Handle error.
         if ($this->code) {
             // Log.
@@ -765,9 +786,12 @@ class HttpRequest extends Explorable
                     // Deliberately '\n' not "\n".
                     $body->message .= '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
             }
-        } elseif ($this->cacheable) {
-            // Do save successful response to cache, on access/retrieval.
-            $this->saveToCache = true;
+        }
+        elseif ($this->validateResponse) {
+            $this->validate($response);
+        }
+        elseif ($this->cacheable) {
+            $this->responseCacheStore->set($this->cacheable['id'], $response, $this->cacheable['ttl']);
         }
 
         return $response;
@@ -787,30 +811,16 @@ class HttpRequest extends Explorable
      * - 'message'
      * - 'data' to null
      *
-     * @param string[] $variantRuleSets
-     *      Optional list of variant rule set names;
-     *      'default' means the base rule set.
-     * @param bool $noCache
-     *      Truthy: get rule set(s) directly from JSON file(s),
-     *      and do not cache the rule set(s).
-     *      Do not use this (truthy) in production; severy performance hit.
-     * @return HttpRequest
+     * @param HttpResponse $response
+     *
+     * @return void
      */
-    public function validate(array $variantRuleSets = [], bool $noCache = false) : HttpRequest
+    protected function validate(HttpResponse $response) /*: void*/
     {
-        // Can't validate twice, because this method sets response body data
-        // to null on validation failure.
-        if ($this->response->validated !== null) {
-            return $this;
-        }
-
-        if ($variantRuleSets) {
-            $rule_sets = array_fill_keys($variantRuleSets, null);
-        } else {
-            $rule_sets = [
-                'default' => null,
-            ];
-        }
+        $rule_sets = array_fill_keys(
+            explode(',', str_replace(' ', '', $this->validateResponse['variant_rule_sets'])),
+            null
+        );
 
         $container = Dependency::container();
 
@@ -830,7 +840,7 @@ class HttpRequest extends Explorable
         $read_filenames = $found_file_paths = $do_cache = [];
         foreach ($rule_sets as $variant => &$rule_set) {
             if (
-                $noCache
+                $this->validateResponse['no_cache_rules']
                 || !($rule_set = $rule_set_cache_store->get(
                     $base_name . ($variant == 'default' ? '' : ('.' . $variant))
                 ))
@@ -838,7 +848,7 @@ class HttpRequest extends Explorable
                 $read_filenames[$variant] = 'http' . $base_name
                     . ($variant == 'default' ? '' : ('.' . $variant)) . $extension;
                 $found_file_paths[$variant] = null;
-                if (!$noCache) {
+                if (!$this->validateResponse['no_cache_rules']) {
                     $do_cache[] = $variant;
                 }
             }
@@ -929,7 +939,7 @@ class HttpRequest extends Explorable
             // Use rule sets by reference because Validate::challengeRecording()
             // will convert them to ValidationRuleSets; which are faster.
             foreach ($rule_sets as $variant => &$rule_set) {
-                $result = $validate->challengeRecording($this->response->body->data, $rule_set);
+                $result = $validate->challengeRecording($response->body->data, $rule_set);
                 if ($result['passed']) {
                     $passed = true;
                     break;
@@ -955,17 +965,18 @@ class HttpRequest extends Explorable
 
         if ($this->code) {
             // Flag that response has been validated, and failed.
-            $this->response->validated = false;
+            $response->validated = false;
 
             // Validation failure is 502 Bad Gateway.
             // Error is 500 Internal Server Error.
-            $this->response->headers['X-KkSeb-Http-Final-Status'] =
-            $this->response->status = $this->response->body->status =
-                $this->code == HttpClient::ERROR_CODES['response-validation'] ? 502 : 500;
+            $response->headers['X-KkSeb-Http-Final-Status'] =
+            $response->status = $response->body->status =
+                ($this->code == HttpClient::ERROR_CODES['response-validation'] ? 502 : 500);
 
-            $this->response->body->code = $this->code;
+            $response->body->success = false;
+            $response->body->code = $this->code;
             // Clear body data.
-            $this->response->body->data = null;
+            $response->body->data = null;
             // Set body 'message'.
             $code_names = array_flip(HttpClient::ERROR_CODES);
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
@@ -974,18 +985,17 @@ class HttpRequest extends Explorable
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
                 'app-title' => $this->properties['appTitle'],
             ];
-            $this->response->body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
+            $response->body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
                 . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
         }
-        elseif ($this->cacheable) {
+        else {
             // Flag that response has been validated, and passed.
-            $this->response->validated = true;
+            $response->validated = true;
 
-            // Do save successful response to cache, on access/retrieval.
-            $this->saveToCache = true;
+            if ($this->cacheable) {
+                $this->responseCacheStore->set($this->cacheable['id'], $response, $this->cacheable['ttl']);
+            }
         }
-
-        return $this;
     }
 }
