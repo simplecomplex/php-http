@@ -13,8 +13,8 @@ use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileListUnique;
 use SimpleComplex\RestMini\Client as RestMiniClient;
-use KkSeb\Validate\Validate;
-use KkSeb\Cache\CacheBroker;
+use KkSeb\Common\Cache\CacheBroker;
+use KkSeb\Common\Validate\Validate;
 use KkSeb\Http\Exception\HttpLogicException;
 use KkSeb\Http\Exception\HttpConfigurationException;
 use KkSeb\Http\Exception\HttpRequestException;
@@ -217,7 +217,7 @@ class HttpRequest extends Explorable
     protected $httpLogger;
 
     /**
-     * @var \KkSeb\Cache\FileCache|null
+     * @var \KkSeb\Common\Cache\FileCache|null
      */
     protected $responseCacheStore;
 
@@ -296,7 +296,7 @@ class HttpRequest extends Explorable
             $container = Dependency::container();
             /** @var CacheBroker $cache_broker */
             $cache_broker = $container->get('cache-broker');
-            /** @var \KkSeb\Cache\FileCache $cache_store */
+            /** @var \KkSeb\Common\Cache\FileCache $cache_store */
             $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
                 'ttlDefault' => static::CACHEABLE_TIME_TO_LIVE,
             ]);
@@ -829,7 +829,7 @@ class HttpRequest extends Explorable
         // should't be used in production.
         /** @var CacheBroker $cache_broker */
         $cache_broker = $container->get('cache-broker');
-        /** @var \KkSeb\Cache\PersistentFileCache $cache_store */
+        /** @var \KkSeb\Common\Cache\PersistentFileCache $cache_store */
         $rule_set_cache_store = $cache_broker->getStore(
             'http-response_validation-rule-set',
             CacheBroker::CACHE_PERSISTENT

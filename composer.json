@@ -10,12 +10,11 @@
         }
     ],
     "require": {
-        "simplecomplex/inspect": "^1.0 || dev-develop",
+        "simplecomplex/inspect": "^2.0 || dev-develop",
         "simplecomplex/restmini": "^1.0 || dev-develop",
         "simplecomplex/utils": "^1.0 || dev-develop",
-        "kk-seb/cache": "^1.0 || dev-develop",
-        "kk-seb/locale": "^1.0 || dev-develop",
-        "kk-seb/validate": "^1.0 || dev-develop"
+        "kk-seb/common": "^1.0 || dev-develop",
+        "kk-seb/user": "^1.0 || dev-develop"
     },
     "autoload": {
         "psr-4": {

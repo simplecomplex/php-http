@@ -137,7 +137,7 @@ class HttpClient
     public $operation;
 
     /**
-     * @var \KkSeb\Config\IniSectionedConfig
+     * @var \KkSeb\Common\Config\IniSectionedConfig
      */
     protected $config;
 
@@ -208,7 +208,7 @@ class HttpClient
         $this->operation = $provider . '.' . $service;
 
         $container = Dependency::container();
-        /** @var \KkSeb\Config\IniSectionedConfig $config */
+        /** @var \KkSeb\Common\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
 
         // Config section: http-provider_kki.
