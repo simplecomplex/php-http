@@ -101,7 +101,7 @@ class HttpRequest extends Explorable
      *
      * @var string
      */
-    const PATH_VALIDATION_RULE_SET = '../conf/json/http-response_validation-rule-sets';
+    const PATH_VALIDATION_RULE_SET = '../conf/json/http/response_validation-rule-sets';
 
     /**
      * Options supported:
@@ -819,13 +819,14 @@ class HttpRequest extends Explorable
     {
         $rule_sets = array_fill_keys(
             explode(',', str_replace(' ', '', $this->validateResponse['variant_rule_sets'])),
+            // Set rule set here.
             null
         );
 
         $container = Dependency::container();
 
-        // Get cache even if arg noCache; truthy noCache should't be used
-        // in production.
+        // Get cache broker even if no_cache_rules; truthy no_cache_rules
+        // should't be used in production.
         /** @var CacheBroker $cache_broker */
         $cache_broker = $container->get('cache-broker');
         /** @var \KkSeb\Cache\PersistentFileCache $cache_store */
@@ -835,6 +836,7 @@ class HttpRequest extends Explorable
         );
         unset($cache_broker);
 
+        // Retrieve rule sets from cache, or memorize which to build from JSON.
         $base_name = $this->properties['operation'];
         $extension = '.validation-rule-set.json';
         $read_filenames = $found_file_paths = $do_cache = [];
@@ -856,6 +858,7 @@ class HttpRequest extends Explorable
         // Iteration ref.
         unset($rule_set);
 
+        // If any to build from JSON.
         if ($read_filenames) {
             // Retrieve JSON files from validation rule set path.
             $utils = Utils::getInstance();
@@ -931,6 +934,7 @@ class HttpRequest extends Explorable
             }
         }
 
+        // If no building from JSON, or no builts failed: do validate.
         if (!$this->code) {
             /** @var Validate $validate */
             $validate = $container->has('validate') ? $container->get('validate') : new Validate();
@@ -963,6 +967,7 @@ class HttpRequest extends Explorable
             }
         }
 
+        // If there was any error, or validation failed.
         if ($this->code) {
             // Flag that response has been validated, and failed.
             $response->validated = false;

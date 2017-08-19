@@ -71,4 +71,12 @@ class HttpResponseBody
         $this->message = $message;
         $this->code = $code;
     }
+
+    /**
+     * @return string
+     */
+    public function __toString() : string
+    {
+        return json_encode($this, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    }
 }

@@ -70,4 +70,12 @@ class HttpResponse
         $this->body = $body;
         $this->originalHeaders = $originalHeaders;
     }
+
+    /**
+     * @return string
+     */
+    public function __toString() : string
+    {
+        return json_encode($this, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    }
 }
