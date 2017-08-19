@@ -1,0 +1,31 @@
+// KkSeb\Http\HttpResponse
+{
+    "status": 200,
+    "headers": {
+        "X-KkSeb-Http-Original-Status": 200,
+        "X-KkSeb-Http-Final-Status": 200
+    },
+    //  KkSeb\Http\HttpResponseBody
+    "body": {
+        "success": true,
+        "status": 200,
+        "data": {
+            "wheels": 2,
+            "saddle": true,
+            "sound": "swooshy",
+            "accessories": {
+                "luggageCarrier": false,
+                "lights": true
+            },
+            "various": [
+                "paint",
+                "rubbish"
+            ]
+        },
+        "message": null,
+        "code": 0
+    },
+    "originalHeaders": {
+        "Content-Type": "application/json"
+    }
+}

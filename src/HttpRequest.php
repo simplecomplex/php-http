@@ -95,7 +95,7 @@ class HttpRequest extends Explorable
     const CACHEABLE_TIME_TO_LIVE = 3600;
 
     /**
-     * Path to where validation rule set .json-files reside.
+     * Path to where response validation rule set .json-files reside.
      *
      * Relative path is relative to document root.
      *
@@ -104,9 +104,19 @@ class HttpRequest extends Explorable
     const PATH_VALIDATION_RULE_SET = '../conf/json/http/response_validation-rule-sets';
 
     /**
+     * Path to where response mock .json-files reside.
+     *
+     * Relative path is relative to document root.
+     *
+     * @var string
+     */
+    const PATH_MOCK = '../conf/json/http/response_mocks';
+
+    /**
      * Options supported:
      * - (bool|arr) cacheable
      * - (bool|arr) validate_response: do validate response against rule set(s)
+     * - (bool|arr) mock_response: use response mock
      * - (arr) require_response_headers: list of response header keys required
      * - (bool) err_on_endpoint_not_found: 404 + HTML
      * - (bool) err_on_resource_not_found: 204, 404 + JSON
@@ -121,6 +131,10 @@ class HttpRequest extends Explorable
      *   'default' meaning the default non-variant rule set
      * - (bool) no_cache_rules: do (not) cache the (JSON-derived) rule set(s)
      *
+     * The mock_response option as array:
+     * - (str) variant: 'default' means the default mock
+     * - (bool) no_cache_mock: do (not) cache the (JSON-derived) mock
+     *
      * See also underlying client's supported methods.
      * @see \SimpleComplex\RestMini\Client::OPTIONS_SUPPORTED
      *
@@ -133,6 +147,8 @@ class HttpRequest extends Explorable
         'cacheable',
         // bool|array.
         'validate_response',
+        // bool|arr.
+        'mock_response',
         // int; milliseconds.
         'retry_on_unavailable',
         // array.
@@ -253,7 +269,7 @@ class HttpRequest extends Explorable
             // Previously detected and logged error.
             $this->aborted = true;
             $this->code = $abortCode;
-            $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
+            $this->response = $this->evaluate(new HttpResponse(500, [], new HttpResponseBody()));
             return;
         }
 
@@ -266,7 +282,11 @@ class HttpRequest extends Explorable
             $this->debugDump = true;
         }
 
-        if (!empty($options['cacheable'])) {
+        // Cacheable - never if mock_response.
+        if (
+            empty($this->options['mock_response'])
+            && !empty($options['cacheable'])
+        ) {
             $chbl = $options['cacheable'];
             $this->cacheable = [
                 'ttl' => static::CACHEABLE_TIME_TO_LIVE,
@@ -352,6 +372,32 @@ class HttpRequest extends Explorable
         $base_url = $this->options['base_url'];
         $endpoint_path = $this->options['service_path'] . '/' . $this->options['endpoint_path'];
 
+        if (!empty($this->options['mock_response'])) {
+            if (is_array($this->options['mock_response'])) {
+                $variant = $this->options['mock_response']['variant'] ?? 'default';
+                $no_cache_mock = !empty($this->options['mock_response']['no_cache_mock']);
+            } else {
+                $variant = 'default';
+                $no_cache_mock = false;
+            }
+            $mock = $this->mock($variant, $no_cache_mock);
+            if (!$mock[0]) {
+                // Don't pass failed mock product through evalution.
+                $this->response = $mock[1];
+            } else {
+                $this->response = $this->evaluate(
+                    $mock[1],
+                    [],
+                    // Set dummy RestMini Client info.
+                    // evaluate() only uses content_type.
+                    [
+                        'content_type' => 'application/json',
+                    ]
+                );
+            }
+            return;
+        }
+
         // Filter non-RestMini Client options off,
         // even option not supported at all.
         $client_options = array_intersect_key(
@@ -361,7 +407,7 @@ class HttpRequest extends Explorable
 
         $client = new RestMiniClient($base_url, $endpoint_path, $client_options);
 
-        // Set RestMini Client log type, for evaluateResponse().
+        // Set RestMini Client log type, for evaluate().
         $this->properties['clientLogType'] = $client->logType();
 
         // Check for RestMini Client initialisation error.
@@ -426,7 +472,7 @@ class HttpRequest extends Explorable
                     'options' => $this->options,
                 ]
             );
-            $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
+            $this->response = $this->evaluate(new HttpResponse(500, [], new HttpResponseBody()));
             return;
         }
 
@@ -477,12 +523,12 @@ class HttpRequest extends Explorable
                 // - require_response_headers
                 // - err_on_endpoint_not_found
                 // - err_on_resource_not_found
-                $this->response = $this->evaluateResponse(
+                $this->response = $this->evaluate(
                     new HttpResponse(
                         $status,
                         [
                             'X-KkSeb-Http-Original-Status' => $status,
-                            // evaluateResponse() may override final status.
+                            // evaluate() may override final status.
                             'X-KkSeb-Http-Final-Status' => $status,
                         ],
                         new HttpResponseBody(
@@ -506,14 +552,14 @@ class HttpRequest extends Explorable
             // Status will be zero it RestMini Client failed to init connection.
             if (!$status) {
                 $status = 500;
-                // No original status; however evaluateResponse() might set it.
+                // No original status; however evaluate() might set it.
                 $return_headers = [];
             } else {
                 $return_headers = [
                     'X-KkSeb-Http-Original-Status' => $status,
                 ];
             }
-            $this->response = $this->evaluateResponse(
+            $this->response = $this->evaluate(
                 new HttpResponse(
                     $status,
                     $return_headers,
@@ -540,7 +586,7 @@ class HttpRequest extends Explorable
                 'Algo error in this method, did not set response instance var at all.',
                 $this->code
             ));
-            $this->response = $this->evaluateResponse(new HttpResponse(500, [], new HttpResponseBody()));
+            $this->response = $this->evaluate(new HttpResponse(500, [], new HttpResponseBody()));
         }
     }
 
@@ -569,7 +615,7 @@ class HttpRequest extends Explorable
      *
      * @return \KkSeb\Http\HttpResponse
      */
-    protected function evaluateResponse(HttpResponse $response, array $error = [], array $info = []) : HttpResponse
+    protected function evaluate(HttpResponse $response, array $error = [], array $info = []) : HttpResponse
     {
         // Refer the inner HttpResponseBody.
         $body = $response->body;
@@ -1002,5 +1048,133 @@ class HttpRequest extends Explorable
                 $this->responseCacheStore->set($this->cacheable['id'], $response, $this->cacheable['ttl']);
             }
         }
+    }
+
+    /**
+     * Retrieves mock response from cache or JSON file.
+     *
+     * @param string $variant
+     * @param bool $noCacheMock
+     *
+     * @return array {
+     *      @var bool  False on mock production failure.
+     *      @var HttpResponse
+     * }
+     */
+    protected function mock(string $variant, $noCacheMock = false) : array
+    {
+        $container = Dependency::container();
+        /** @var CacheBroker $cache_broker */
+        $cache_broker = $container->get('cache-broker');
+        /** @var \KkSeb\Common\Cache\PersistentFileCache $cache_store */
+        $mock_cache_store = $cache_broker->getStore(
+            'http-response_mock',
+            CacheBroker::CACHE_PERSISTENT
+        );
+        unset($cache_broker);
+
+        $base_name = $this->properties['operation'];
+        if ($variant != 'default') {
+            $base_name .= '.' . $variant;
+        }
+        $mock = null;
+        if ($noCacheMock || !($mock = $mock_cache_store->get($base_name))) {
+            // Find JSON file in mock path.
+            $utils = Utils::getInstance();
+            $path = '';
+            try {
+                // Throws various exceptions.
+                $path = $utils->resolvePath(static::PATH_MOCK);
+                // Throws \InvalidArgumentException, \RuntimeException.
+                $files = (new PathFileListUnique($path, 'mock.json'))->getArrayCopy();
+                if (!isset($files[$base_name . '.mock.json'])) {
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http mock response',
+                        new HttpConfigurationException(
+                            get_class($this) . '::PATH_MOCK path['
+                            . static::PATH_MOCK . '] have no file of variant[' . $variant . '] as child or descendant.',
+                            $this->code + HttpClient::ERROR_CODE_OFFSET
+                        )
+                    );
+                } else {
+                    $mock = $utils->parseJsonFile($files[$base_name . '.mock.json']);
+                    HttpResponse::cast($mock);
+                }
+            } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
+                $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http mock response',
+                    new HttpConfigurationException(
+                        'Mock JSON file is not parsable, see previous.',
+                        $this->code + HttpClient::ERROR_CODE_OFFSET,
+                        $xcptn
+                    )
+                );
+            } catch (\Throwable $xcptn) {
+                if (!$path) {
+                    $this->code = HttpClient::ERROR_CODES['local-algo'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http mock response',
+                        new HttpLogicException(
+                            get_class($this) . '::PATH_MOCK path[' . static::PATH_MOCK . '] is not a valid path.',
+                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $xcptn
+                        )
+                    );
+                } else {
+                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                    $this->httpLogger->log(
+                        LOG_ERR,
+                        'Http mock response',
+                        new HttpConfigurationException(
+                            'Mock JSON file is non-unique, non-existent, unreadable or can\'t be cast to HttpResponse'
+                            . ', see previous.',
+                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $xcptn
+                        )
+                    );
+                }
+            }
+            if (!$noCacheMock && !$this->code) {
+                $mock_cache_store->set($base_name, $mock);
+            }
+        }
+
+        if (!$this->code) {
+            $mock->headers['X-KkSeb-Http-Mock-Response'] = '1';
+            return [
+                true,
+                $mock
+            ];
+        }
+
+        // For body 'message'.
+        $code_names = array_flip(HttpClient::ERROR_CODES);
+        /** @var \SimpleComplex\Locale\AbstractLocale $locale */
+        $locale = Dependency::container()->get('locale');
+        $replacers = [
+            'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+            'app-title' => $this->properties['appTitle'],
+        ];
+        return [
+            false,
+            new HttpResponse(
+                500,
+                [],
+                new HttpResponseBody(
+                    false,
+                    500,
+                    null,
+                    $locale->text('http:error:' . $code_names[$this->code], $replacers)
+                    // Deliberately '\n' not "\n".
+                    . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers),
+                    $this->code
+                )
+            )
+        ];
     }
 }

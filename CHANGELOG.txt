@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-08-19
+--------------------------
+- mock_response option.
+
 KkSeb/Http 1.x, 2017-08-18
 --------------------------
 - Set remote response headers on HttpResponse instead of on HttpRequest.

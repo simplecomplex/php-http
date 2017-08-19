@@ -52,7 +52,7 @@ class HttpResponseBody
      *
      * @var int|null
      */
-    public $code;
+    public $code = 0;
 
     /**
      * All parameters are optional.

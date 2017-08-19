@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use SimpleComplex\Utils\Utils;
+
 /**
  * Http response.
  *
@@ -77,5 +79,47 @@ class HttpResponse
     public function __toString() : string
     {
         return json_encode($this, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * Cast object or array to instance of this class.
+     *
+     * @param object|array $subject
+     *
+     * @throws \TypeError
+     *      Arg subject is not object|array.
+     *      Arg subject is object whose class isn't a parent of this class.
+     */
+    public static function cast(&$subject) /*:void*/
+    {
+        if (is_object($subject)) {
+            $from_class_name = get_class($subject);
+            if ($from_class_name != \stdClass::class && !in_array($from_class_name, class_parents(static::class))) {
+                throw new \TypeError(
+                    'Can\'t cast arg subject, class[' . $from_class_name
+                    . '] is not parent class of this class[' . static::class . '].'
+                );
+            }
+            $source_props = get_object_vars($subject);
+        } elseif (!is_array($subject)) {
+            throw new \TypeError(
+                'Arg subject type[' . Utils::getType($subject) . '] is not object or array.'
+            );
+        } else {
+            // Copy.
+            $source_props = $subject;
+        }
+        if (isset($source_props['body'])) {
+            $body = $source_props['body'];
+            Utils::cast($body, HttpResponseBody::class);
+        } else {
+            $body = new HttpResponseBody();
+        }
+        $subject = new static(
+            $source_props['status'] ?? 500,
+            isset($source_props['headers']) ? (array) $source_props['headers'] : [],
+            $body,
+            isset($source_props['originalHeaders']) ? (array) $source_props['originalHeaders'] : []
+        );
     }
 }
