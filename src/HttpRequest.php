@@ -13,6 +13,7 @@ use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileListUnique;
 use SimpleComplex\RestMini\Client as RestMiniClient;
+use SimpleComplex\Validate\ValidationRuleSet;
 use KkSeb\Common\Cache\CacheBroker;
 use KkSeb\Common\Validate\Validate;
 use KkSeb\Http\Exception\HttpLogicException;
@@ -373,6 +374,12 @@ class HttpRequest extends Explorable
         $endpoint_path = $this->options['service_path'] . '/' . $this->options['endpoint_path'];
 
         if (!empty($this->options['mock_response'])) {
+            if ($this->debugDump) {
+                $this->httpLogger->log(LOG_DEBUG, 'Http request ▷', null, [
+                    'options' => $this->options,
+                    'arguments' => $this->arguments,
+                ]);
+            }
             if (is_array($this->options['mock_response'])) {
                 $variant = $this->options['mock_response']['variant'] ?? 'default';
                 $no_cache_mock = !empty($this->options['mock_response']['no_cache_mock']);
@@ -840,6 +847,15 @@ class HttpRequest extends Explorable
             $this->responseCacheStore->set($this->cacheable['id'], $response, $this->cacheable['ttl']);
         }
 
+        if (!$this->code && $this->debugDump) {
+            $this->httpLogger->log(
+                LOG_DEBUG,
+                'Http' . (empty($this->options['mock_response']) ? '' : ' mocked') . ' response ◀',
+                null,
+                $response
+            );
+        }
+
         return $response;
     }
 
@@ -856,6 +872,11 @@ class HttpRequest extends Explorable
      * - 'status' to 502 Bad Gateway (response only, not response body)
      * - 'message'
      * - 'data' to null
+     *
+     * @code
+     * # CLI delete cached validation rule set.
+     * php cli.phpsh cache-delete http-response_validation-rule-set provider.service.endpoint.METHODorAlias
+     * @endcode
      *
      * @param HttpResponse $response
      *
@@ -885,7 +906,7 @@ class HttpRequest extends Explorable
         // Retrieve rule sets from cache, or memorize which to build from JSON.
         $base_name = $this->properties['operation'];
         $extension = '.validation-rule-set.json';
-        $read_filenames = $found_file_paths = $do_cache = [];
+        $read_filenames = $found_file_paths = $do_cache_sets = [];
         foreach ($rule_sets as $variant => &$rule_set) {
             if (
                 $this->validateResponse['no_cache_rules']
@@ -893,11 +914,10 @@ class HttpRequest extends Explorable
                     $base_name . ($variant == 'default' ? '' : ('.' . $variant))
                 ))
             ) {
-                $read_filenames[$variant] = 'http' . $base_name
-                    . ($variant == 'default' ? '' : ('.' . $variant)) . $extension;
+                $read_filenames[$variant] = $base_name . ($variant == 'default' ? '' : ('.' . $variant)) . $extension;
                 $found_file_paths[$variant] = null;
                 if (!$this->validateResponse['no_cache_rules']) {
-                    $do_cache[] = $variant;
+                    $do_cache_sets[] = $variant;
                 }
             }
         }
@@ -913,7 +933,7 @@ class HttpRequest extends Explorable
                 // Throws various exceptions.
                 $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
                 // Throws \InvalidArgumentException, \RuntimeException.
-                $files = (new PathFileListUnique($path, 'validation-rule-set.json'))->getArrayCopy();
+                $files = (new PathFileListUnique($path, ['validation-rule-set.json']))->getArrayCopy();
                 foreach ($read_filenames as $variant => $filename) {
                     if (isset($files[$filename])) {
                         $found_file_paths[$variant] = $files[$filename];
@@ -932,7 +952,10 @@ class HttpRequest extends Explorable
                             . join(', ', array_keys($read_filenames)) . '] as children or descendants.',
                             $this->code + HttpClient::ERROR_CODE_OFFSET
                         ),
-                        $read_filenames
+                        [
+                            'files missing' => $read_filenames,
+                            'files found' => array_keys($files),
+                        ]
                     );
                 }
                 else {
@@ -999,11 +1022,22 @@ class HttpRequest extends Explorable
             // Iteration ref.
             unset($rule_set);
 
+            if ($do_cache_sets) {
+                foreach ($do_cache_sets as $variant) {
+                    // Cast outer rule set to actual ValidationRuleSet.
+                    Utils::cast($rule_sets[$variant], ValidationRuleSet::class);
+                    $rule_set_cache_store->set(
+                        $base_name . ($variant == 'default' ? '' : ('.' . $variant)),
+                        $rule_sets[$variant]
+                    );
+                }
+            }
+
             if (!$passed) {
                 $this->code = HttpClient::ERROR_CODES['response-validation'];
                 $this->httpLogger->log(
                     LOG_ERR,
-                    'Http response',
+                    'Http validate response',
                     new HttpResponseValidationException(
                         'Response failed validation.',
                         $this->code + HttpClient::ERROR_CODE_OFFSET
@@ -1053,6 +1087,11 @@ class HttpRequest extends Explorable
     /**
      * Retrieves mock response from cache or JSON file.
      *
+     * @code
+     * # CLI delete cached mock response.
+     * php cli.phpsh cache-delete http-response_mock provider.service.endpoint.METHODorAlias
+     * @endcode
+     *
      * @param string $variant
      * @param bool $noCacheMock
      *
@@ -1086,7 +1125,7 @@ class HttpRequest extends Explorable
                 // Throws various exceptions.
                 $path = $utils->resolvePath(static::PATH_MOCK);
                 // Throws \InvalidArgumentException, \RuntimeException.
-                $files = (new PathFileListUnique($path, 'mock.json'))->getArrayCopy();
+                $files = (new PathFileListUnique($path, ['mock.json']))->getArrayCopy();
                 if (!isset($files[$base_name . '.mock.json'])) {
                     $this->code = HttpClient::ERROR_CODES['local-configuration'];
                     $this->httpLogger->log(
@@ -1096,7 +1135,11 @@ class HttpRequest extends Explorable
                             get_class($this) . '::PATH_MOCK path['
                             . static::PATH_MOCK . '] have no file of variant[' . $variant . '] as child or descendant.',
                             $this->code + HttpClient::ERROR_CODE_OFFSET
-                        )
+                        ),
+                        [
+                            'file required' => $base_name . '.mock.json',
+                            'files found' => array_keys($files),
+                        ]
                     );
                 } else {
                     $mock = $utils->parseJsonFile($files[$base_name . '.mock.json']);

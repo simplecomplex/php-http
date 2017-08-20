@@ -151,17 +151,18 @@ class HttpClient
      */
     protected $initError;
 
+    // @todo: getInstance() method.
+
     /**
      * HTTP client, configured for requesting any endpoint+method
      * of a service.
      *
      * @code
      * $client = new HttpClient('provider', 'service', 'Some app');
-     * $request = (new HttpClient('provider', 'service', 'Some app'))
-     *     ->request('endpoint', 'METHOD', [
+     * $request = $client->request('endpoint', 'METHOD', [
      *         'path' => ['path',],
      *         'query' => ['what' => 'ever',],
-     *         'body' => ['what' => 'ever',]
+     *         'body' => null
      *     ], [
      *         // HttpClient option.
      *         'err_on_resource_not_found' => true,
@@ -169,7 +170,6 @@ class HttpClient
      *         'request_timeout' => 60,
      *     ]);
      * $response = $request->response;
-     * $response = $request->validate()->response;
      * @endcode
      *
      * @param string $provider
@@ -288,7 +288,10 @@ class HttpClient
             );
         }
 
+        // @todo: HttpClient cannot have endpoint/method state; breaks reusability.
         $this->operation .= '.' . $endpoint . '.' . $methodOrAlias;
+
+
         $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
         $properties = [
             'method' => $methodOrAlias,

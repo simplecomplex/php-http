@@ -1,4 +1,5 @@
-// KkSeb\Http\HttpResponse
+// JSON parser allows line comments; Utils->parseIniString().
+// Will be cast to KkSeb\Http\HttpResponse.
 {
     "status": 200,
     "headers": {
