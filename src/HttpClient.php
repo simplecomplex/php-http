@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\RestMini\Client as RestMiniClient;
@@ -24,10 +25,108 @@ use KkSeb\Http\Exception\HttpConfigurationException;
  * @see \KkSeb\Http\HttpResponseBody::success
  * @see \KkSeb\Http\HttpResponseBody::message
  *
+ * @property-read string $provider
+ * @property-read string $service
+ * @property-read string $appTitle
+ * @property-read \Throwable|null $initError
+ *
  * @package KkSeb\Http
  */
-class HttpClient
+class HttpClient extends Explorable
 {
+    // Explorable.--------------------------------------------------------------
+
+    /**
+     * @var array
+     */
+    protected $explorableIndex = [
+        'provider',
+        'service',
+        'appTitle',
+        'initError',
+    ];
+
+    /**
+     * @param string $name
+     *
+     * @return mixed
+     *
+     * @throws \OutOfBoundsException
+     *      If no such instance property.
+     */
+    public function __get($name)
+    {
+        if (in_array($name, $this->explorableIndex, true)) {
+            if ($name == 'initError' && $this->initError) {
+                // Nobody must tamper with this exception.
+                return clone $this->initError;
+            }
+            return $this->{$name};
+        }
+        throw new \OutOfBoundsException(get_class($this) . ' instance exposes no property[' . $name . '].');
+    }
+
+    /**
+     * @param string $name
+     * @param mixed|null $value
+     *
+     * @return void
+     *
+     * @throws \OutOfBoundsException
+     *      If no such instance property.
+     * @throws \RuntimeException
+     *      If that instance property is read-only.
+     */
+    public function __set($name, $value) /*: void*/
+    {
+        if (in_array($name, $this->explorableIndex, true)) {
+            throw new \RuntimeException(get_class($this) . ' instance property[' . $name . '] is read-only.');
+        }
+        throw new \OutOfBoundsException(get_class($this) . ' instance exposes no property[' . $name . '].');
+    }
+
+
+    // Reusable instances.------------------------------------------------------
+
+    /**
+     * Reference to first object instantiated via the getInstance() method,
+     * using specific class and constructor args (except appTitle).
+     *
+     * @var array
+     */
+    protected static $instanceByClassAndArgs = [];
+
+    /**
+     * First object instantiated via this method, using that class
+     * and same args provider and service.
+     *
+     * @param string $provider
+     * @param string $service
+     * @param string $appTitle
+     *      Optional and not taken into account when reusing existing instance.
+     *
+     * @return HttpClient|static
+     *
+     * @throws \Throwable
+     *      Propagated; see constructor.
+     */
+    public static function getInstance(string $provider, string $service, string $appTitle = '')
+    {
+        $id = static::class . '|' . $provider . '.' . $service;
+        if (isset(static::$instanceByClassAndArgs[$id])) {
+            return static::$instanceByClassAndArgs[$id];
+        }
+        // Don't store failed init instance, would result in dupe exceptions;
+        // wrong stack/trace for later uses.
+        if (!($instance = new static($provider, $service, $appTitle))->initError) {
+            static::$instanceByClassAndArgs[$id] = $instance;
+        }
+        return $instance;
+    }
+
+
+    // Business.----------------------------------------------------------------
+
     /**
      * @var string
      */
@@ -110,31 +209,31 @@ class HttpClient
     /**
      * @var string
      */
-    public $provider;
+    protected $provider;
 
     /**
      * @var string
      */
-    public $service;
-
-    /**
-     * Provider and service settings merged.
-     *
-     * @var array
-     */
-    public $settings = [];
+    protected $service;
 
     /**
      * Localized named of requesting application, used for user error messages.
      *
      * @var string
      */
-    public $appTitle;
+    protected $appTitle;
 
     /**
-     * @var string
+     * @var \Throwable|null
      */
-    public $operation;
+    protected $initError;
+
+    /**
+     * Provider and service settings merged.
+     *
+     * @var array
+     */
+    protected $settings = [];
 
     /**
      * @var \KkSeb\Common\Config\IniSectionedConfig
@@ -147,15 +246,9 @@ class HttpClient
     protected $httpLogger;
 
     /**
-     * @var \Throwable|null
-     */
-    protected $initError;
-
-    // @todo: getInstance() method.
-
-    /**
-     * HTTP client, configured for requesting any endpoint+method
-     * of a service.
+     * HTTP client, configured for requesting any endpoint+method of a service.
+     *
+     * Reusable.
      *
      * @code
      * $client = new HttpClient('provider', 'service', 'Some app');
@@ -205,8 +298,6 @@ class HttpClient
         }
         $this->service = $service;
 
-        $this->operation = $provider . '.' . $service;
-
         $container = Dependency::container();
         /** @var \KkSeb\Common\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
@@ -252,6 +343,9 @@ class HttpClient
     }
 
     /**
+     * Attempt to send HTTP request, response will be a property
+     * of the returned request object.
+     *
      * @param string $endpoint
      *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $methodOrAlias
@@ -288,14 +382,12 @@ class HttpClient
             );
         }
 
-        // @todo: HttpClient cannot have endpoint/method state; breaks reusability.
-        $this->operation .= '.' . $endpoint . '.' . $methodOrAlias;
+        $operation = $this->provider . '.' . $this->service . '.' . $endpoint . '.' . $methodOrAlias;
 
-
-        $this->httpLogger = new HttpLogger(static::LOG_TYPE, $this->operation);
+        $this->httpLogger = new HttpLogger(static::LOG_TYPE, $operation);
         $properties = [
             'method' => $methodOrAlias,
-            'operation' => $this->operation,
+            'operation' => $operation,
             'appTitle' => $this->appTitle,
             'httpLogger' => $this->httpLogger,
         ];
@@ -356,11 +448,11 @@ class HttpClient
         }
         // Config section: http-service_kki_seb-personale_cpr_GET.
         // Method configuration is allowed to empty array.
-        if (($conf_method = $this->config->get('http-method.' . $this->operation, '*')) === null) {
+        if (($conf_method = $this->config->get('http-method.' . $operation, '*')) === null) {
             $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
-                . 'http-method.' . $this->operation . '] is not configured.',
+                . 'http-method.' . $operation . '] is not configured.',
                 $code + static::ERROR_CODE_OFFSET
             ));
             return new HttpRequest($properties, [], [], $code);

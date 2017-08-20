@@ -27,6 +27,7 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
  *
  * @internal
  *
+ * @property-read string $operation  provider.service.endpoint.METHODorAlias
  * @property-read \KkSeb\Http\HttpResponse $response
  * @property-read int $code
  * @property-read bool $aborted
@@ -43,6 +44,7 @@ class HttpRequest extends Explorable
      * @var array
      */
     protected $explorableIndex = [
+        'operation',
         'response',
         'code',
         'aborted',
@@ -61,6 +63,9 @@ class HttpRequest extends Explorable
     public function __get($name)
     {
         if (in_array($name, $this->explorableIndex, true)) {
+            if ($name == 'operation') {
+                return $this->properties['operation'];
+            }
             return $this->{$name};
         }
         throw new \OutOfBoundsException(get_class($this) . ' instance exposes no property[' . $name . '].');
