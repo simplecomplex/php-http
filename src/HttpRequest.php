@@ -102,7 +102,7 @@ class HttpRequest extends Explorable
      *
      * @var string
      */
-    const PATH_VALIDATION_RULE_SET = '../conf/json/http/response_validation-rule-sets';
+    const PATH_VALIDATION_RULE_SET = '../conf/json/http/response-validation-rule-sets';
 
     /**
      * Path to where response mock .json-files reside.
@@ -111,7 +111,7 @@ class HttpRequest extends Explorable
      *
      * @var string
      */
-    const PATH_MOCK = '../conf/json/http/response_mocks';
+    const PATH_MOCK = '../conf/json/http/response-mocks';
 
     /**
      * Options supported:
