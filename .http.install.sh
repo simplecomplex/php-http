@@ -1,11 +1,11 @@
 #!/bin/bash -e
 # Stop (don't exit) on error.
---------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 ### PHP source dir: backend
 ### Angular source dir: frontend
 
-# Place yourself in the site's document root.
-cd [document root]
+## PLACE YOURSELF IN THE SITE'S DOCUMENT ROOT.
+#cd [document root]
 
 # Set document root var.
 doc_root=`pwd`
