@@ -16,6 +16,7 @@ use SimpleComplex\RestMini\Client as RestMiniClient;
 use SimpleComplex\Validate\ValidationRuleSet;
 use KkSeb\Common\Cache\CacheBroker;
 use KkSeb\Common\Validate\Validate;
+use KkSeb\User\User;
 use KkSeb\Http\Exception\HttpLogicException;
 use KkSeb\Http\Exception\HttpConfigurationException;
 use KkSeb\Http\Exception\HttpRequestException;
@@ -300,7 +301,7 @@ class HttpRequest extends Explorable
                 'refresh' => false,
             ];
             if ($chbl === true) {
-                $this->cacheable['id'] .= 'userIdent' . ']'; // @todo: get brugerIdent.
+                $this->cacheable['id'] .= User::get()->id . ']';
             } else {
                 if (!empty($chbl['ttl'])) {
                     $this->cacheable['ttl'] = $chbl['ttl'];
@@ -312,7 +313,7 @@ class HttpRequest extends Explorable
                      */
                     $this->cacheable['id'] .= '.]';
                 } else {
-                    $this->cacheable['id'] .= 'userIdent' . ']'; // @todo: get brugerIdent.
+                    $this->cacheable['id'] .= User::get()->id . ']';
                 }
                 if (!empty($chbl['refresh'])) {
                     $this->cacheable['refresh'] = true;
