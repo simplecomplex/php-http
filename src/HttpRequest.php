@@ -643,7 +643,7 @@ class HttpRequest extends Explorable
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
                 'app-title' => $this->properties['appTitle'],
             ];
-            $body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
+            $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
                 . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
 
@@ -756,7 +756,7 @@ class HttpRequest extends Explorable
                 case 304: // Not Modified.
                     // Swell.
                     break;
-                case 400: // Bad Request.
+                case 400: // Bad Request; interpretes to validation failure.
                     $body->success = false;
                     // Keep status.
                     $this->code = HttpClient::ERROR_CODES['remote-validation-bad'];
@@ -776,7 +776,8 @@ class HttpRequest extends Explorable
                         $this->code = HttpClient::ERROR_CODES['resource-not-found'];
                     }
                     break;
-                case 412: // Precondition Failed.
+                case 412: // Precondition Failed; interpretes to validation failure.
+                case 422: // Unprocessable Entity (WebDAV, but gaining support).
                     $body->success = false;
                     // Keep status.
                     $this->code = HttpClient::ERROR_CODES['remote-validation-failed'];
@@ -835,7 +836,7 @@ class HttpRequest extends Explorable
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
                 'app-title' => $this->properties['appTitle'],
             ];
-            $body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers);
+            $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers);
             switch ($code_names[$this->code]) {
                 case 'timeout':
                 case 'timeout-propagated':
@@ -1085,7 +1086,7 @@ class HttpRequest extends Explorable
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
                 'app-title' => $this->properties['appTitle'],
             ];
-            $response->body->message = $locale->text('http:error:' . $code_names[$this->code], $replacers)
+            $response->body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
                 . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
         }
@@ -1227,7 +1228,7 @@ class HttpRequest extends Explorable
                     false,
                     500,
                     null,
-                    $locale->text('http:error:' . $code_names[$this->code], $replacers)
+                    $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                     // Deliberately '\n' not "\n".
                     . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers),
                     $this->code

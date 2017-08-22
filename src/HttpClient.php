@@ -192,7 +192,7 @@ class HttpClient extends Explorable
         // Unexpected 204, 404 + Content-Type JSON; no such resource (object).
         'resource-not-found' => 61,
 
-        // 400 Bad Request, 412 Precondition Failed.
+        // 400 Bad Request, 412 Precondition Failed, 422 Unprocessable Entity.
         'remote-validation-bad' => 70,
         'remote-validation-failed' => 71,
         // Content type mismatch.

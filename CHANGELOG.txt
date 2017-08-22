@@ -1,6 +1,10 @@
 KkSeb/Http 1.x, 2017-08-22
 --------------------------
 - Log response body on response validation failure; separate warning log event.
+- Do discern between service (as AJAX request receiver) and client (as remote
+  service requestor).
+- Prefab HttpResponseRequestInvalid to send when frontend request arguments
+  fail _request_ validation.
 
 KkSeb/Http 1.x, 2017-08-20
 --------------------------
