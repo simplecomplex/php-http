@@ -68,7 +68,7 @@ class HttpLogger
         if ($exception && $exception instanceof HttpResponseValidationException && $variables) {
             $msg .= "\n" . 'Discrepancies recorded vs. rule set(s):';
             foreach ($variables as $variant => $record) {
-                $msg .= "\n· " . $variant . ":\n    " . join("\n", $record);
+                $msg .= "\n· " . $variant . ":\n    " . join("\n    ", $record);
             }
             $msg .= "\n" . $inspect->trace($exception, ['wrappers' => 1]);
         } else {

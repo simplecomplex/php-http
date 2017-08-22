@@ -1050,6 +1050,15 @@ class HttpRequest extends Explorable
                     ),
                     $records
                 );
+                // Log response body separately, as warning.
+                // Makes it easier to correlate validation records
+                // with response body buckets; in log viewer.
+                $this->httpLogger->log(
+                    LOG_WARNING,
+                    'Http invalid response body',
+                    null,
+                    $response->body
+                );
             }
         }
 
