@@ -59,4 +59,8 @@ ln -s ${path_backend}'/vendor/kk-seb/http/response-mocks' ${path_conf}'/json/htt
 ### Refresh global configuration #######
 php cli.phpsh config-refresh global -y
 
+
+### Success ############################
+echo -e "\n\033[01;32m[success]\033[0m"' KkSeb Http setup successfully.'
+
 #### END #######################################################################
