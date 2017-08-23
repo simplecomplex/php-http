@@ -1,0 +1,31 @@
+// Will be cast to SimpleComplex\Validate\ValidationRuleSet.
+// JSON parser allows line comments; Utils->parseIniString().
+//{
+//    "rolle": [
+//        "MEDARBEJDER",
+//        "LEDER",
+//        "STEDFORTRÆDER"
+//    ]
+//}
+{
+    "object": true,
+    "tableElements": {
+        "rulesByElements": {
+            "rolle": {
+                "array": true,
+                "listItems": {
+                    "minOccur": 0,
+                    "maxOccur": 3,
+                    "itemRules": {
+                        "string": true,
+                        "enum": [
+                            "MEDARBEJDER",
+                            "LEDER",
+                            "STEDFORTRÆDER"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

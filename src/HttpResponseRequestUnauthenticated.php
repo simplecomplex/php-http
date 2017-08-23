@@ -11,13 +11,13 @@ namespace KkSeb\Http;
 use SimpleComplex\Utils\Dependency;
 
 /**
- * Prefab HttpResponse to send upon request header/argument validation failure.
+ * Prefab HttpResponse to send upon authentication (login) failure.
  *
  * @uses-dependency-container locale, application-title
  *
  * @package KkSeb\Http
  */
-class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
+class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
 {
     /**
      * @param int $code
@@ -28,14 +28,14 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
      */
     public function __construct(
         int $code = 0,
-        int $status = HttpService::STATUS_CODE['request-validation'],
+        int $status = HttpService::STATUS_CODE['unauthenticated'],
         array $headers = [],
         array $messages = []
     ) {
-        $final_code = $code ? $code : HttpService::ERROR_CODES['request-validation'] + HttpService::ERROR_CODE_OFFSET;
-        $final_status = $status ? $status : HttpService::STATUS_CODE['request-validation'];
+        $final_code = $code ? $code : HttpService::ERROR_CODES['unauthenticated'] + HttpService::ERROR_CODE_OFFSET;
+        $final_status = $status ? $status : HttpService::STATUS_CODE['unauthenticated'];
         if ($messages) {
-            $headers['X-KkSeb-Http-Request-Invalid'] = str_replace(
+            $headers['X-KkSeb-Http-Request-Unauthenticated'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,21 +45,21 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-KkSeb-Http-Request-Invalid'] = '1';
+            $headers['X-KkSeb-Http-Request-Unauthenticated'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */
         $locale = $container->get('locale');
         $replacers = [
-            'error' => $final_code . ':http:request-validation',
+            'error' => $final_code . ':http:unauthenticated',
             'application-title' => $container->get('application-title'),
         ];
         $body = new HttpResponseBody(
             false,
             $final_status,
             null,
-            $locale->text('http-service:error:request-validation', $replacers)
-            . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers),
+            // No error message suffix.
+            $locale->text('http-service:error:unauthenticated', $replacers),
             $final_code
         );
 

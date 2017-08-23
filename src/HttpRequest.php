@@ -26,6 +26,8 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
 /**
  * HTTP request, to be issued by HttpClient.
  *
+ * @uses-dependency-container cache-broker, locale, application-title
+ *
  * @internal
  *
  * @property-read string $operation  provider.service.endpoint.METHODorAlias
@@ -203,7 +205,7 @@ class HttpRequest extends Explorable
      * @var array {
      *      @var string $method  METHOD
      *      @var string $operation  provider.server.endpoint.METHODorAlias
-     *      @var string $appTitle  Localized application title.
+     *      @var string $applicationTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }
      */
@@ -254,7 +256,7 @@ class HttpRequest extends Explorable
      * @param array $properties {
      *      @var string $method  METHOD
      *      @var string $operation  provider.server.endpoint.METHODorAlias
-     *      @var string $appTitle  Localized application title.
+     *      @var string $applicationTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }
      * @param array $options
@@ -637,15 +639,16 @@ class HttpRequest extends Explorable
             $response->status = $body->status = 500;
             $body->code = $this->code;
             $code_names = array_flip(HttpClient::ERROR_CODES);
+            $container = Dependency::container();
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
-            $locale = Dependency::container()->get('locale');
+            $locale = $container->get('locale');
             $replacers = [
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
-                'app-title' => $this->properties['appTitle'],
+                'application-title' => $container->get('application-title'),
             ];
             $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
+                . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers);
 
             // Aborted is already logged.
             return $response;
@@ -830,11 +833,12 @@ class HttpRequest extends Explorable
                 ]
             );
             // Set body 'message'.
+            $container = Dependency::container();
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
-            $locale = Dependency::container()->get('locale');
+            $locale = $container->get('locale');
             $replacers = [
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
-                'app-title' => $this->properties['appTitle'],
+                'application-title' => $container->get('application-title'),
             ];
             $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers);
             switch ($code_names[$this->code]) {
@@ -844,7 +848,7 @@ class HttpRequest extends Explorable
                     break;
                 default:
                     // Deliberately '\n' not "\n".
-                    $body->message .= '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
+                    $body->message .= '\n' . $locale->text('common:error-suffix_user-report-error', $replacers);
             }
         }
         elseif ($this->validateResponse) {
@@ -1080,15 +1084,16 @@ class HttpRequest extends Explorable
             $response->body->data = null;
             // Set body 'message'.
             $code_names = array_flip(HttpClient::ERROR_CODES);
+            $container = Dependency::container();
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
-            $locale = Dependency::container()->get('locale');
+            $locale = $container->get('locale');
             $replacers = [
                 'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
-                'app-title' => $this->properties['appTitle'],
+                'application-title' => $container->get('application-title'),
             ];
             $response->body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers);
+                . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers);
         }
         else {
             // Flag that response has been validated, and passed.
@@ -1213,11 +1218,12 @@ class HttpRequest extends Explorable
 
         // For body 'message'.
         $code_names = array_flip(HttpClient::ERROR_CODES);
+        $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */
-        $locale = Dependency::container()->get('locale');
+        $locale = $container->get('locale');
         $replacers = [
             'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
-            'app-title' => $this->properties['appTitle'],
+            'application-title' => $container->get('application-title'),
         ];
         return [
             false,
@@ -1230,7 +1236,7 @@ class HttpRequest extends Explorable
                     null,
                     $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                     // Deliberately '\n' not "\n".
-                    . '\n' . $locale->text('http:error-suffix_user-report-error', $replacers),
+                    . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers),
                     $this->code
                 )
             )

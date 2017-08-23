@@ -25,9 +25,10 @@ use KkSeb\Http\Exception\HttpConfigurationException;
  * @see \KkSeb\Http\HttpResponseBody::success
  * @see \KkSeb\Http\HttpResponseBody::message
  *
+ * @uses-dependency-container config
+ *
  * @property-read string $provider
  * @property-read string $service
- * @property-read string $appTitle
  * @property-read \Throwable|null $initError
  *
  * @package KkSeb\Http
@@ -42,7 +43,6 @@ class HttpClient extends Explorable
     protected $explorableIndex = [
         'provider',
         'service',
-        'appTitle',
         'initError',
     ];
 
@@ -90,7 +90,7 @@ class HttpClient extends Explorable
 
     /**
      * Reference to first object instantiated via the getInstance() method,
-     * using specific class and constructor args (except appTitle).
+     * using specific class and constructor args.
      *
      * @var array
      */
@@ -102,15 +102,13 @@ class HttpClient extends Explorable
      *
      * @param string $provider
      * @param string $service
-     * @param string $appTitle
-     *      Optional and not taken into account when reusing existing instance.
      *
      * @return HttpClient|static
      *
      * @throws \Throwable
      *      Propagated; see constructor.
      */
-    public static function getInstance(string $provider, string $service, string $appTitle = '')
+    public static function getInstance(string $provider, string $service)
     {
         $id = static::class . '|' . $provider . '.' . $service;
         if (isset(static::$instanceByClassAndArgs[$id])) {
@@ -118,7 +116,7 @@ class HttpClient extends Explorable
         }
         // Don't store failed init instance, would result in dupe exceptions;
         // wrong stack/trace for later uses.
-        if (!($instance = new static($provider, $service, $appTitle))->initError) {
+        if (!($instance = new static($provider, $service))->initError) {
             static::$instanceByClassAndArgs[$id] = $instance;
         }
         return $instance;
@@ -217,13 +215,6 @@ class HttpClient extends Explorable
     protected $service;
 
     /**
-     * Localized named of requesting application, used for user error messages.
-     *
-     * @var string
-     */
-    protected $appTitle;
-
-    /**
      * @var \Throwable|null
      */
     protected $initError;
@@ -269,8 +260,6 @@ class HttpClient extends Explorable
      *      Name [a-zA-Z][a-zA-Z\d_\-]*
      * @param string $service
      *      Name [a-zA-Z][a-zA-Z\d_\-]*
-     * @param string $appTitle
-     *      Default: localeText http:app-title.
      *
      * @uses HttpConfigurationException
      *      Un-configured provider or service.
@@ -280,7 +269,7 @@ class HttpClient extends Explorable
      *      Propagated; unlikely errors (dependency injection container, config)
      *      normally detected prior to creating a HttpClient.
      */
-    public function __construct(string $provider, string $service, string $appTitle = '')
+    public function __construct(string $provider, string $service)
     {
         if (strpos($provider, '.') !== false) {
             throw new \InvalidArgumentException(
@@ -333,13 +322,6 @@ class HttpClient extends Explorable
             // A-OK, so far.
             $this->settings = array_replace_recursive($conf_provider, $conf_service);
         }
-
-        if (!$appTitle) {
-            /** @var \SimpleComplex\Locale\AbstractLocale $locale */
-            $locale = Dependency::container()->get('locale');
-            $appTitle = $locale->text('http:app-title');
-        }
-        $this->appTitle = $appTitle;
     }
 
     /**
@@ -388,7 +370,6 @@ class HttpClient extends Explorable
         $properties = [
             'method' => $methodOrAlias,
             'operation' => $operation,
-            'appTitle' => $this->appTitle,
             'httpLogger' => $this->httpLogger,
         ];
 

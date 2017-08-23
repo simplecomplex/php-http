@@ -15,6 +15,8 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
 /**
  * Non a PSR logger, but uses such.
  *
+ * @uses-dependency-container logger, inspect
+ *
  * @internal
  *
  * @package KkSeb\Http
