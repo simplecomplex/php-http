@@ -49,12 +49,12 @@ fi
 ### Configuration (global) #############
 
 ## Symlink base configuration files.
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.ini' ${path_conf}'/ini/base/http.ini'
+ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.global.ini' ${path_conf}'/ini/base/http.global.ini'
 ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http-services' ${path_conf}'/ini/base/http-services'
 
 ## Override configuration files
-# http.dev.override.ini vs. http.prod.override.ini.
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.'${environment}'.override.ini' ${path_conf}'/ini/override/http.'${environment}'.override.ini'
+# http.dev.override.global.ini vs. http.prod.override.global.ini.
+ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.'${environment}'.override.global.ini' ${path_conf}'/ini/override/http.'${environment}'.override.global.ini'
 
 
 ### Service response validation ########
