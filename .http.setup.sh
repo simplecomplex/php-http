@@ -75,6 +75,7 @@ ln -s ${path_backend}'/vendor/kk-seb/http/response-mocks' ${path_conf}'/json/htt
 
 ### Refresh global configuration #######
 php cli.phpsh config-refresh global -y
+sleep 1
 
 
 ### Success ############################
