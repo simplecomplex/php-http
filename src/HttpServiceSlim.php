@@ -15,7 +15,7 @@ use Slim\Http\Response;
  *
  * @package KkSeb\Http
  */
-class HttpServiceSlim
+class HttpServiceSlim extends HttpService
 {
     /**
      * Set Cross Origin headers, preferably only in development.
@@ -24,16 +24,18 @@ class HttpServiceSlim
      * Angular serves from other host in development;
      * typically http://localhost:4200 (ng serve|npm start).
      *
-     * See ini configuration files:
-     * - vendor/kk-seb/http/config-ini/http.dev.override.ini
-     * - vendor/kk-seb/http/config-ini/http.prod.override.ini
+     * Set as comma-separated list (no spaces) in file
+     * [document root]/.access_control_allow_origin
+     *
+     * @see HttpService::crossOriginSitesAllowed()
      *
      * @param \Slim\Http\Response $response
-     * @param array $allowedSites
+     * @param string $allowedSites
+     *      Comma-separated, no spaces.
      *
      * @return \Slim\Http\Response
      */
-    public static function setCrossOriginHeaders(Response $response, array $allowedSites) : Response
+    public static function setCrossOriginHeaders(Response $response, string $allowedSites) : Response
     {
         if ($allowedSites) {
             // Allow requestor to see all relevant response headers;
@@ -44,7 +46,7 @@ class HttpServiceSlim
                 join(',', array_keys($response->getHeaders())) . ',Content-Length'
             )
                 // Allow CORS for sites.
-                ->withHeader('Access-Control-Allow-Origin', join(',', $allowedSites));
+                ->withHeader('Access-Control-Allow-Origin', $allowedSites);
         }
         return $response;
     }

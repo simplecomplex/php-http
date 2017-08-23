@@ -2,6 +2,11 @@ KkSeb/Http 1.x, 2017-08-23
 --------------------------
 - Application title is now retrieved from dependency injection container;
   no longer a HttpClient constructor parameter.
+- Cross Origin allowed sites are now set in file
+  [document root]/.access_control_allow_origin, instead of ini derived config;
+  because otherwise Slim PHP and exception handlers cannot be trusted to be able
+  to access that list.
+- Bash setup script support 'environment' argument, dev|prod.
 
 KkSeb/Http 1.x, 2017-08-22
 --------------------------

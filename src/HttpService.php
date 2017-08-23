@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace KkSeb\Http;
 
+use SimpleComplex\Utils\Utils;
+
 /**
  * Http service.
  *
@@ -52,4 +54,21 @@ class HttpService
         // 422 Unprocessable Entity; WebDAV, but gaining support because exact.
         'request-validation' => 400,
     ];
+
+    /**
+     * Cross origin sites allowed.
+     *
+     * Set as comma-separated list (no spaces) in file
+     * [document root]/.access_control_allow_origin
+     *
+     * @return string
+     */
+    public static function crossOriginSitesAllowed() : string
+    {
+        $file = Utils::getInstance()->documentRoot() . '/.access_control_allow_origin';
+        if (file_exists($file)) {
+            return trim(file_get_contents($file));
+        }
+        return '';
+    }
 }

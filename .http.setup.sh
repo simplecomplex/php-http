@@ -1,11 +1,21 @@
 #!/bin/bash -e
 # Stop (don't exit) on error.
 #-------------------------------------------------------------------------------
+### Library: http
 ### PHP source dir: backend
 ### Angular source dir: frontend
 
 ## PLACE YOURSELF IN THE SITE'S DOCUMENT ROOT.
 #cd [document root]
+
+## Script accepts one optional 'environment' argument: dev|prod
+
+# Establish environment: dev|prod.
+if [ "$1" == 'prod' ]; then
+    environment='prod'
+else
+    environment='dev'
+fi
 
 # Set document root var.
 doc_root=`pwd`
@@ -27,6 +37,15 @@ path_frontend=${doc_root}'/frontend'
 
 #### BACKEND INSTALLATION ######################################################
 
+### (dev only) CROSS ORIGIN SITES ######
+
+if [ ${environment} != 'prod' ]; then
+    # Comma-separated list; no spaces.
+    # Angular (ng serve, npm start): http://localhost:4200.
+    echo "http://localhost:4200" > ${doc_root}'/.access_control_allow_origin'
+fi
+
+
 ### Configuration (global) #############
 
 ## Symlink base configuration files.
@@ -34,10 +53,8 @@ ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.ini' ${path_conf}'/ini
 ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http-services' ${path_conf}'/ini/base/http-services'
 
 ## Override configuration files
-# PRODUCTION
-#ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.prod.override.ini' ${path_conf}'/ini/override/http.prod.override.ini'
-# DEVELOPMENT
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.dev.override.ini' ${path_conf}'/ini/override/http.dev.override.ini'
+# http.dev.override.ini vs. http.prod.override.ini.
+ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.'${environment}'.override.ini' ${path_conf}'/ini/override/http.'${environment}'.override.ini'
 
 
 ### Service response validation ########
