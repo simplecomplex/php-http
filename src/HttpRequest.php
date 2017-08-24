@@ -205,7 +205,6 @@ class HttpRequest extends Explorable
      * @var array {
      *      @var string $method  METHOD
      *      @var string $operation  provider.server.endpoint.METHODorAlias
-     *      @var string $applicationTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }
      */
@@ -256,7 +255,6 @@ class HttpRequest extends Explorable
      * @param array $properties {
      *      @var string $method  METHOD
      *      @var string $operation  provider.server.endpoint.METHODorAlias
-     *      @var string $applicationTitle  Localized application title.
      *      @var HttpLogger $httpLogger
      * }
      * @param array $options
