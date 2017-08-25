@@ -72,10 +72,13 @@ mkdir -p ${path_conf}'/json/http/response-mocks'
 ## Symlink dir of KkSeb/Http mocks.
 ln -s ${path_backend}'/vendor/kk-seb/http/response-mocks' ${path_conf}'/json/http/response-mocks/http'
 
-
 ### Refresh global configuration #######
+export PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SKIP_CONFIRM=1
+export PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SILENT=1
 php cli.phpsh config-refresh global -y
 sleep 1
+unset PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SKIP_CONFIRM
+unset PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SILENT
 
 
 ### Success ############################
