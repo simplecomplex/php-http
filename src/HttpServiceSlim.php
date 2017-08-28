@@ -89,10 +89,11 @@ class HttpServiceSlim extends HttpService
      * typically due to custom request header.
      *
      * Headers set:
-     * - Access-Control-Allow-Methods; all methods supported by our HTTP client,
+     * - Access-Control-Allow-Methods: all methods supported by our HTTP client,
      *   because we cannot know here which methods the endpoint supports
      * - Access-Control-Allow-Headers: same as the request's
-     *   Access-Control-Request-Headers list
+     *   Access-Control-Request-Headers: list
+     * - Access-Control-Max-Age: we don't want to see these requests too often.
      *
      * @param Request $request
      * @param Response $response
@@ -119,6 +120,10 @@ class HttpServiceSlim extends HttpService
                     // and apparantly also understands response
                     // Access-Control-Allow-Headers lowercased.
                     join(', ', $request->getHeader('Access-Control-Request-Headers'))
+                )->withHeader(
+                    'Access-Control-Max-Age',
+                    // @todo: that setting shan't sit on that class.
+                    '' . HttpRequest::CACHEABLE_TIME_TO_LIVE
                 );
             }
         }
