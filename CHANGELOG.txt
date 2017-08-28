@@ -1,3 +1,8 @@
+KkSeb/Http 1.x, 2017-08-28
+--------------------------
+- Cross origin pre-request OPTIONS request support; to allow/support
+  custom request headers.
+
 KkSeb/Http 1.x, 2017-08-23
 --------------------------
 - Application title is now retrieved from dependency injection container;

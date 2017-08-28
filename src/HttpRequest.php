@@ -99,6 +99,9 @@ class HttpRequest extends Explorable
     /**
      * Default cacheable time-to-live.
      *
+     * @todo: move to HttpClient(?), because more accessible.
+     * @todo: move to Common, and probably make it method which gets from configuration.
+     *
      * @var int
      */
     const CACHEABLE_TIME_TO_LIVE = 3600;
@@ -122,6 +125,8 @@ class HttpRequest extends Explorable
     const PATH_MOCK = '../conf/json/http/response-mocks';
 
     /**
+     * @todo: move to HttpClient(?), because more accessible.
+     *
      * Options supported:
      * - (bool|arr) cacheable
      * - (bool|arr) validate_response: do validate response against rule set(s)
@@ -301,7 +306,7 @@ class HttpRequest extends Explorable
                 'refresh' => false,
             ];
             if ($chbl === true) {
-                $this->cacheable['id'] .= User::get()->id . ']';
+                $this->cacheable['id'] .= User::get()->id . ']'; // @todo: append X-KkSeb-Page-Load-Id
             } else {
                 if (!empty($chbl['ttl'])) {
                     $this->cacheable['ttl'] = $chbl['ttl'];
@@ -313,7 +318,7 @@ class HttpRequest extends Explorable
                      */
                     $this->cacheable['id'] .= '.]';
                 } else {
-                    $this->cacheable['id'] .= User::get()->id . ']';
+                    $this->cacheable['id'] .= User::get()->id . ']'; // @todo: append X-KkSeb-Page-Load-Id
                 }
                 if (!empty($chbl['refresh'])) {
                     $this->cacheable['refresh'] = true;

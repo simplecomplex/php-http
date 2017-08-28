@@ -56,6 +56,13 @@ class HttpService
     ];
 
     /**
+     * Comma-separated list of sites.
+     *
+     * @var string
+     */
+    protected static $crossOriginSitesAllowed;
+
+    /**
      * Cross origin sites allowed.
      *
      * Set as comma-separated list (no spaces) in file
@@ -65,10 +72,10 @@ class HttpService
      */
     public static function crossOriginSitesAllowed() : string
     {
-        $file = Utils::getInstance()->documentRoot() . '/.access_control_allow_origin';
-        if (file_exists($file)) {
-            return trim(file_get_contents($file));
+        if (static::$crossOriginSitesAllowed === null) {
+            $file = Utils::getInstance()->documentRoot() . '/.access_control_allow_origin';
+            static::$crossOriginSitesAllowed = !file_exists($file) ? '' : trim(file_get_contents($file));
         }
-        return '';
+        return static::$crossOriginSitesAllowed;
     }
 }
