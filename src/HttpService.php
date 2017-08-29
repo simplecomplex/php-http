@@ -36,6 +36,9 @@ class HttpService
         'unauthorized' => 21,
 
         'request-validation' => 30,
+
+        // Frontend-only error.
+        'frontend-response-validation' => 95,
     ];
 
     /**

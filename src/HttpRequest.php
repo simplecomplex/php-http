@@ -171,6 +171,8 @@ class HttpRequest extends Explorable
         'err_on_endpoint_not_found',
         // bool; unexpected 204, 404 + JSON.
         'err_on_resource_not_found',
+
+        // @todo: option to log 504 timeout as warning instead of error.
     ];
 
 
