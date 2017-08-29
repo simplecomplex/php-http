@@ -57,6 +57,12 @@ ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http-services' ${path_conf}
 ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.'${environment}'.override.global.ini' ${path_conf}'/ini/override/http.'${environment}'.override.global.ini'
 
 
+### Configuration (frontend) ###########
+
+## Symlink frontend configuration file.
+ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.frontend.ini' ${path_conf}'/ini/base/http.frontend.ini'
+
+
 ### Service response validation ########
 
 ## Create rule-set dir
