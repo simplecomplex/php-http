@@ -97,16 +97,6 @@ class HttpRequest extends Explorable
     // Business.----------------------------------------------------------------
 
     /**
-     * Default cacheable time-to-live.
-     *
-     * @todo: move to HttpClient(?), because more accessible.
-     * @todo: move to Common, and probably make it method which gets from configuration.
-     *
-     * @var int
-     */
-    const CACHEABLE_TIME_TO_LIVE = 3600;
-
-    /**
      * Path to where response validation rule set .json-files reside.
      *
      * Relative path is relative to document root.
@@ -123,58 +113,6 @@ class HttpRequest extends Explorable
      * @var string
      */
     const PATH_MOCK = '../conf/json/http/response-mocks';
-
-    /**
-     * @todo: move to HttpClient(?), because more accessible.
-     *
-     * Options supported:
-     * - (bool|arr) cacheable
-     * - (bool|arr) validate_response: do validate response against rule set(s)
-     * - (bool|arr) mock_response: use response mock
-     * - (arr) require_response_headers: list of response header keys required
-     * - (bool) err_on_endpoint_not_found: 404 + HTML
-     * - (bool) err_on_resource_not_found: 204, 404 + JSON
-     *
-     * The cacheable option as array:
-     * - (int) ttl: time-to-live, default CACHEABLE_TIME_TO_LIVE
-     * - refresh: retrieve new response and cache it, default not
-     * - anybody: for any user, default current user only
-     *
-     * The validate_response option as array:
-     * - (str) rule_set_variants: comma-separated list of variant names,
-     *   'default' meaning the default non-variant rule set
-     * - (bool) no_cache_rules: do (not) cache the (JSON-derived) rule set(s)
-     *
-     * The mock_response option as array:
-     * - (str) variant: 'default' means the default mock
-     * - (bool) no_cache_mock: do (not) cache the (JSON-derived) mock
-     *
-     * See also underlying client's supported methods.
-     * @see \SimpleComplex\RestMini\Client::OPTIONS_SUPPORTED
-     *
-     * @var string[]
-     */
-    const OPTIONS_SUPPORTED = [
-        // bool.
-        'debug_dump',
-        // bool|array.
-        'cacheable',
-        // bool|array.
-        'validate_response',
-        // bool|arr.
-        'mock_response',
-        // int; milliseconds.
-        'retry_on_unavailable',
-        // array.
-        'require_response_headers',
-        // bool; 404 + HTML.
-        'err_on_endpoint_not_found',
-        // bool; unexpected 204, 404 + JSON.
-        'err_on_resource_not_found',
-
-        // @todo: option to log 504 timeout as warning instead of error.
-    ];
-
 
     // Read-only members.-------------------------------------------------------
 
@@ -303,12 +241,17 @@ class HttpRequest extends Explorable
         ) {
             $chbl = $options['cacheable'];
             $this->cacheable = [
-                'ttl' => static::CACHEABLE_TIME_TO_LIVE,
+                'ttl' => HttpClient::CACHEABLE_TIME_TO_LIVE,
                 'id' => $properties['operation'] . '[user-',
                 'refresh' => false,
             ];
             if ($chbl === true) {
-                $this->cacheable['id'] .= User::get()->id . ']'; // @todo: append X-KkSeb-Page-Load-Id
+                // NB: cache is not per page/form, like Drupal
+                // kk_seb_service_client.
+                // Would require that requestor sent a X-KkSeb-Page-Load-Id
+                // header, based on an (backend cached) ID originally issued
+                // by a local service; called by Angular root app ngOnit().
+                $this->cacheable['id'] .= User::get()->id . ']';
             } else {
                 if (!empty($chbl['ttl'])) {
                     $this->cacheable['ttl'] = $chbl['ttl'];
@@ -320,7 +263,12 @@ class HttpRequest extends Explorable
                      */
                     $this->cacheable['id'] .= '.]';
                 } else {
-                    $this->cacheable['id'] .= User::get()->id . ']'; // @todo: append X-KkSeb-Page-Load-Id
+                    // NB: cache is not per page/form, like Drupal
+                    // kk_seb_service_client.
+                    // Would require that requestor sent a X-KkSeb-Page-Load-Id
+                    // header, based on an (backend cached) ID originally issued
+                    // by a local service; called by Angular root app ngOnit().
+                    $this->cacheable['id'] .= User::get()->id . ']';
                 }
                 if (!empty($chbl['refresh'])) {
                     $this->cacheable['refresh'] = true;
@@ -332,7 +280,7 @@ class HttpRequest extends Explorable
             $cache_broker = $container->get('cache-broker');
             /** @var \KkSeb\Common\Cache\FileCache $cache_store */
             $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
-                'ttlDefault' => static::CACHEABLE_TIME_TO_LIVE,
+                'ttlDefault' => HttpClient::CACHEABLE_TIME_TO_LIVE,
             ]);
             unset($cache_broker);
 
@@ -823,7 +771,7 @@ class HttpRequest extends Explorable
             // Log.
             $code_names = array_flip(HttpClient::ERROR_CODES);
             $this->httpLogger->log(
-                LOG_ERR,
+                !empty($this->options['log_warning_on_status']['' . $this->response->status]) ? LOG_WARNING : LOG_ERR,
                 'Http response',
                 new HttpResponseException(
                     'Response evaluates to HttpClient error[' . $code_names[$this->code] . '].',
@@ -833,7 +781,7 @@ class HttpRequest extends Explorable
                     'final status' => $response->status,
                     'original status' => $original_status,
                     'info' => $info ? $info :
-                        'see previous warning, type or subtype \'' . $this->properties['clientLogType'] . '\',',
+                        'see previous warning event, type or subtype \'' . $this->properties['clientLogType'] . '\',',
                     'response' => $response,
                 ]
             );

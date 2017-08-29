@@ -1,3 +1,9 @@
+KkSeb/Http 1.x, 2017-08-29
+--------------------------
+- HttpClient option log_warning_on_status, primarily to prevent log flood
+  of 504 Bad Gateway events.
+- Constants that right belong to HttpClient moved from HttpRequest.
+
 KkSeb/Http 1.x, 2017-08-28
 --------------------------
 - Cross origin pre-request OPTIONS request support; to allow/support

@@ -10,7 +10,6 @@ namespace KkSeb\Http;
 
 use Slim\Http\Request;
 use Slim\Http\Response;
-use SimpleComplex\RestMini\Client as RestMiniClient;
 
 /**
  * Slim Http service utils.
@@ -113,7 +112,7 @@ class HttpServiceSlim extends HttpService
                 // All HTTP methods supported by our HTTP client.
                 $response = $response->withHeader(
                     'Access-Control-Allow-Methods',
-                    join(', ', RestMiniClient::METHODS_SUPPORTED)
+                    join(', ', HttpClient::methodsSupported())
                 )->withHeader(
                     'Access-Control-Allow-Headers',
                     // Browser sends Access-Control-Request-Headers lowercased,
@@ -122,8 +121,7 @@ class HttpServiceSlim extends HttpService
                     join(', ', $request->getHeader('Access-Control-Request-Headers'))
                 )->withHeader(
                     'Access-Control-Max-Age',
-                    // @todo: that setting shan't sit on that class.
-                    '' . HttpRequest::CACHEABLE_TIME_TO_LIVE
+                    '' . HttpClient::CACHEABLE_TIME_TO_LIVE
                 );
             }
         }

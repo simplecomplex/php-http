@@ -131,6 +131,13 @@ class HttpClient extends Explorable
     const LOG_TYPE = 'http-client';
 
     /**
+     * Default cacheable time-to-live.
+     *
+     * @var int
+     */
+    const CACHEABLE_TIME_TO_LIVE = 3600;
+
+    /**
      * Settings/options required, and their (scalar) types.
      *
      * If type is string then value can't be empty string.
@@ -142,6 +149,64 @@ class HttpClient extends Explorable
     const OPTIONS_REQUIRED = [
         'base_url' => 'string',
         'endpoint_path' => 'string',
+    ];
+
+    /**
+     * Options supported:
+     * - (bool|arr) cacheable
+     * - (bool|arr) validate_response: do validate response against rule set(s)
+     * - (bool|arr) mock_response: use response mock
+     * - (arr) require_response_headers: list of response header keys required
+     * - (bool) err_on_endpoint_not_found: 404 + HTML
+     * - (bool) err_on_resource_not_found: 204, 404 + JSON
+     *
+     * The cacheable option as array:
+     * - (int) ttl: time-to-live, default CACHEABLE_TIME_TO_LIVE
+     * - refresh: retrieve new response and cache it, default not
+     * - anybody: for any user, default current user only
+     * NB: cache is not per page/form, like Drupal
+     * kk_seb_service_client.
+     * Would require that requestor sent a X-KkSeb-Page-Load-Id
+     * header, based on an (backend cached) ID originally issued
+     * by a local service; called by Angular root app ngOnit().
+     *
+     * The validate_response option as array:
+     * - (str) rule_set_variants: comma-separated list of variant names,
+     *   'default' meaning the default non-variant rule set
+     * - (bool) no_cache_rules: do (not) cache the (JSON-derived) rule set(s)
+     *
+     * The mock_response option as array:
+     * - (str) variant: 'default' means the default mock
+     * - (bool) no_cache_mock: do (not) cache the (JSON-derived) mock
+     *
+     * See also required options, which may not be a subset of this list.
+     * @see HttpClient::OPTIONS_REQUIRED
+     *
+     * See also underlying client's supported methods.
+     * @see \SimpleComplex\RestMini\Client::OPTIONS_SUPPORTED
+     *
+     * @var string[]
+     */
+    const OPTIONS_SUPPORTED = [
+        // bool.
+        'debug_dump',
+        // bool|array.
+        'cacheable',
+        // bool|array.
+        'validate_response',
+        // bool|arr.
+        'mock_response',
+        // int; milliseconds.
+        'retry_on_unavailable',
+        // array.
+        'require_response_headers',
+        // bool; 404 + HTML.
+        'err_on_endpoint_not_found',
+        // bool; unexpected 204, 404 + JSON.
+        'err_on_resource_not_found',
+        // arr; log erroneous response as warning (not error).
+        // Key status is string (not integer), value is boolean.
+        'log_warning_on_status',
     ];
 
     /**
@@ -525,6 +590,17 @@ class HttpClient extends Explorable
         }
 
         return new HttpRequest($properties, $options, $arguments);
+    }
+
+    /**
+     * HTTP methods supported relies solely on the underlying HTTP client,
+     * but that shan't be exposed; to prevent lock-in.
+     *
+     * @return string[]
+     */
+    public static function methodsSupported() : array
+    {
+        return RestMiniClient::METHODS_SUPPORTED;
     }
 
     /**
