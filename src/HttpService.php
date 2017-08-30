@@ -37,7 +37,8 @@ class HttpService
 
         'request-validation' => 30,
 
-        // Frontend-only error.
+        // Errors only detectable at frontend.
+        'frontend-response-format' => 80,
         'frontend-response-validation' => 95,
     ];
 
