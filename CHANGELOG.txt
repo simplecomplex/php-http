@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-08-31
+--------------------------
+- Response mocking turned off globally in production.
+
 KkSeb/Http 1.x, 2017-08-29
 --------------------------
 - HttpClient option log_warning_on_status, primarily to prevent log flood

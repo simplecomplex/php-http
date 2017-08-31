@@ -560,6 +560,11 @@ class HttpClient extends Explorable
             $this->httpLogger->type = $options['log_type'];
         }
 
+        // Response mocking should be turned off globally in production.
+        if ($this->config->get('http', 'mock_response') === false) {
+            unset($options['mock_response']);
+        }
+
         // Secure that required options are available.
         foreach (static::OPTIONS_REQUIRED as $name => $type) {
             if (
