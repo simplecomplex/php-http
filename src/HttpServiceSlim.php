@@ -11,13 +11,63 @@ namespace KkSeb\Http;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
+use SimpleComplex\Config\IniSectionedConfig;
+
 /**
- * Slim Http service utils.
+ * Slim HTTP service (route responder) base class.
  *
  * @package KkSeb\Http
  */
 class HttpServiceSlim extends HttpService
 {
+    /**
+     * @var IniSectionedConfig
+     */
+    protected $config;
+
+    /**
+     * @param IniSectionedConfig $config
+     */
+    protected function __construct(IniSectionedConfig $config)
+    {
+        $this->config = $config;
+    }
+
+    /**
+     * Route method for responding to pre-flight OPTIONS request.
+     *
+     * @param Request $request
+     * @param Response $response
+     *
+     * @return Response
+     */
+    public function crossOriginOptions(Request $request, Response $response)
+    {
+        // Allow http://localhost:4200 in development (ng serve, npm start),
+        // using custom headers.
+        return static::crossOriginOptionsSetHeaders($request, $response);
+    }
+
+    /**
+     * Dependency injection container ID.
+     *
+     * Extending class _must_ override this.
+     *
+     * @var string
+     */
+    const DEPENDENCY_ID = 'http-responder.???';
+
+    /**
+     * Extending class _must_ override this.
+     *
+     * @var array
+     */
+    const ROUTES = [
+        [
+            'http-method-lowercased', '/route', 'routeMethodName',
+        ]
+    ];
+
     /**
      * Set Cross Origin headers, preferably only in development.
      *

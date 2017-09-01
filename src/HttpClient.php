@@ -561,7 +561,7 @@ class HttpClient extends Explorable
         }
 
         // Response mocking should be turned off globally in production.
-        if ($this->config->get('http', 'mock_response') === false) {
+        if ($this->config->get('http', 'response-mocking-disabled')) {
             unset($options['mock_response']);
         }
 
