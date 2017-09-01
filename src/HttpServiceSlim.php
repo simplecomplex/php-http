@@ -55,7 +55,7 @@ class HttpServiceSlim extends HttpService
      *
      * @var string
      */
-    const DEPENDENCY_ID = 'http-responder.???';
+    const DEPENDENCY_ID = 'http-service.???';
 
     /**
      * Extending class _must_ override this.
