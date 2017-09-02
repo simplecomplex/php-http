@@ -18,8 +18,7 @@
     },
     "autoload": {
         "psr-4": {
-            "KkSeb\\Http\\": "src/",
-            "KkSeb\\Http\\Exception\\": "src/Exception/"
+            "KkSeb\\Http\\": "src/"
         }
     }
 }
