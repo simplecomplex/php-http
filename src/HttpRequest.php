@@ -828,7 +828,10 @@ class HttpRequest extends Explorable
      *
      * If more variant rule sets, the response will be checked against them
      * in the received order, and validation stops at first pass.
-     * NB: do make sure that strict rule sets go before forgiving rule sets.
+     * Do make sure that strict rule sets go before forgiving rule sets.
+     *
+     * Uses persistent cache allowing long keys; length 128.
+     * Because variant rule sets may have long names.
      *
      * Modifies response + response body if validation fails, setting:
      * - 'code' to HttpClient error code 'response-validation'
@@ -863,7 +866,8 @@ class HttpRequest extends Explorable
         /** @var \KkSeb\Common\Cache\PersistentFileCache $cache_store */
         $rule_set_cache_store = $cache_broker->getStore(
             'http-response_validation-rule-set',
-            CacheBroker::CACHE_PERSISTENT
+            // Allow length 128 keys.
+            CacheBroker::CACHE_KEY_LONG_PERSISTENT
         );
         unset($cache_broker);
 
@@ -1061,6 +1065,9 @@ class HttpRequest extends Explorable
     /**
      * Retrieves mock response from cache or JSON file.
      *
+     * Uses persistent cache allowing long keys; length 128.
+     * Because variant mocks may have long names.
+     *
      * @code
      * # CLI delete cached mock response.
      * php cli.phpsh cache-delete http-response_mock provider.service.endpoint.METHODorAlias
@@ -1082,7 +1089,8 @@ class HttpRequest extends Explorable
         /** @var \KkSeb\Common\Cache\PersistentFileCache $cache_store */
         $mock_cache_store = $cache_broker->getStore(
             'http-response_mock',
-            CacheBroker::CACHE_PERSISTENT
+            // Allow length 128 keys.
+            CacheBroker::CACHE_KEY_LONG_PERSISTENT
         );
         unset($cache_broker);
 

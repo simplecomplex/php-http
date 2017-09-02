@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-09-02
+--------------------------
+- Mock and validation rule set caches allow long keys; length 128.
+
 KkSeb/Http 1.x, 2017-08-31
 --------------------------
 - Response mocking turned off globally in production.
