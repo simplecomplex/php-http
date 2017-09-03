@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-09-03
+--------------------------
+- Slim initialization generalized and moved to HttpServiceSlim.
+
 KkSeb/Http 1.x, 2017-09-02
 --------------------------
 - Mock and validation rule set caches allow long keys; length 128.

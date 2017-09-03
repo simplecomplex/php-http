@@ -16,6 +16,9 @@
         "kk-seb/common": "^1.0 || dev-develop",
         "kk-seb/user": "^1.0 || dev-develop"
     },
+    "suggest": {
+        "slim/slim": "^3.8.1"
+    },
     "autoload": {
         "psr-4": {
             "KkSeb\\Http\\": "src/"

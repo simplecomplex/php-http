@@ -9,14 +9,67 @@ declare(strict_types=1);
 namespace KkSeb\Http;
 
 use SimpleComplex\Utils\Utils;
+use SimpleComplex\Utils\Dependency;
+use SimpleComplex\Config\IniSectionedConfig;
 
 /**
- * Http service.
+ * Base class of all HTTP services, based on Slim
+ * or other service exposure framework.
  *
  * @package KkSeb\Http
  */
-class HttpService
+abstract class HttpService
 {
+    /**
+     * Final extending class _must_ override this.
+     *
+     * @var string
+     */
+    const APPLICATION_ID = 'application-id-unknown';
+
+    /**
+     * Dependency injection container ID.
+     *
+     * Final extending class _must_ override this.
+     *
+     * @var string
+     */
+    const DEPENDENCY_ID = 'http-service.unknown';
+
+    /**
+     * @var IniSectionedConfig
+     */
+    protected $config;
+
+    /**
+     * @param IniSectionedConfig $config
+     */
+    protected function __construct(IniSectionedConfig $config)
+    {
+        $this->config = $config;
+        // Provide application dependencies, now that we know which application
+        // receives the request.
+        $container = Dependency::container();
+        $application_id = static::APPLICATION_ID;
+        Dependency::genericSetMultiple(
+            [
+                'application-id' => $application_id,
+                'application-title' => function () use ($container, $application_id) {
+                    // Use common application title as fallback,
+                    // if the solution's locale text ini file misses
+                    // [some-application-id]
+                    // application-title = Some Solution.
+                    /** @var \SimpleComplex\Locale\AbstractLocale $locale */
+                    $locale = $container->get('locale');
+                    if (($text = $locale->text($application_id . ':application-title', [], ''))) {
+                        return $text;
+                    }
+                    return $locale->text('common:application-title');
+                }
+            ]
+        );
+    }
+
     /**
      * Range is this +99.
      *
