@@ -20,7 +20,7 @@ use SimpleComplex\Config\IniSectionedConfig;
  * Slim HTTP service (route responder) base class.
  *
  * See the bootstrapper.
- * @see HttpServiceSlim::initSlim()
+ * @see HttpServiceSlim::bootstrap()
  *
  * @package KkSeb\Http
  */
@@ -205,7 +205,7 @@ abstract class HttpServiceSlim extends HttpService
      *
      * @return \Slim\App
      */
-    public static function initSlim()
+    public static function bootstrap()
     {
         // Create Slim dependency injection container.
         $container = new /*\Slim\*/Container;
