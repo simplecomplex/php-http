@@ -19,6 +19,9 @@ use SimpleComplex\Config\IniSectionedConfig;
 /**
  * Slim HTTP service (route responder) base class.
  *
+ * See the bootstrapper.
+ * @see HttpServiceSlim::initSlim()
+ *
  * @package KkSeb\Http
  */
 abstract class HttpServiceSlim extends HttpService
@@ -29,10 +32,40 @@ abstract class HttpServiceSlim extends HttpService
      * @var array
      */
     const ROUTES = [
+        // Slim App route methods' second arg callable with single colon means:
+        // - get before-colon-dependency and call it's after-colon-method
         [
             'http-method-lowercased', '/route', 'routeMethodName',
         ]
     ];
+
+    /**
+     * Declares Slim routes.
+     *
+     * Has to be static, otherwise redundant instantiation:
+     * - request matches this class: double instantiation
+     * - request matches other class: one (unneeded) instantiation
+     *
+     * Also declares OPTION routes, if any cross origin sites allowed.
+     *
+     * @param \Slim\App $app
+     */
+    public static function routes($app)
+    {
+        $cross_origin_sites_allowed = static::crossOriginSitesAllowed();
+        $set_cross_origin_options_routes = !!$cross_origin_sites_allowed;
+
+        foreach (static::ROUTES as $route) {
+            $method = $route[0];
+            $app->{$method}($route[1], static::DEPENDENCY_ID . ':' . $route[2]);
+
+            // Set OPTION routes to respond to cross origin 'pre-flight' OPTION
+            // request, which a browser issues if a request sends custom headers.
+            if ($set_cross_origin_options_routes) {
+                $app->options($route[1], static::DEPENDENCY_ID . ':crossOriginOptions');
+            }
+        }
+    }
 
     /**
      * @param IniSectionedConfig $config
@@ -168,6 +201,8 @@ abstract class HttpServiceSlim extends HttpService
     }
 
     /**
+     * Bootstraps Slim, and the kk-seb|simplecomplex framework for all services.
+     *
      * @return \Slim\App
      */
     public static function initSlim()

@@ -125,6 +125,10 @@ abstract class HttpService
      * Set as comma-separated list (no spaces) in file
      * [document root]/.access_control_allow_origin
      *
+     * NB: cross origin sites allowed are valid for _all_ services.
+     * If only some services should be exposed to cross origin, you'll have
+     * to make more sites (period!).
+     *
      * @return string
      */
     public static function crossOriginSitesAllowed() : string

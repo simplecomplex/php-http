@@ -1,6 +1,8 @@
 KkSeb/Http 1.x, 2017-09-03
 --------------------------
 - Slim initialization generalized and moved to HttpServiceSlim.
+- HttpServiceSlim is now the overall bootstrapper,
+  of Slim and the kk-seb|simplecomplex framework.
 
 KkSeb/Http 1.x, 2017-09-02
 --------------------------
