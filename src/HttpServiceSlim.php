@@ -16,6 +16,8 @@ use Slim\Http\Response;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Config\IniSectionedConfig;
 
+use KkSeb\Common\Common;
+
 /**
  * Slim HTTP service (route responder) base class.
  *
@@ -203,9 +205,12 @@ abstract class HttpServiceSlim extends HttpService
     /**
      * Bootstraps Slim, and the kk-seb|simplecomplex framework for all services.
      *
+     * @param Callable|null $customLogger
+     *      Custom logger; default is JsonLog.
+     *
      * @return \Slim\App
      */
-    public static function bootstrap()
+    public static function bootstrap(/*?Callable*/ $customLogger = null)
     {
         // Create Slim dependency injection container.
         $container = new /*\Slim\*/Container;
@@ -216,25 +221,15 @@ abstract class HttpServiceSlim extends HttpService
         // The Slim container itself is still usable directly.
         // KkSeb and SimpleComplex classes use the container via Dependency,
         // to avoid dependency of a particular PSR Container (like Slim's).
-        Dependency::injectExternalContainer($container);
-
-        // Provide basic dependencies for error handling.
-        Dependency::genericSetMultiple(
-            [
-                'cache-broker' => function () {
-                    return new \KkSeb\Common\Cache\CacheBroker();
-                },
-                'config' => function() {
-                    return new \KkSeb\Common\Config\Config('global');
-                },
-                'logger' => function() use ($container) {
-                    return new \KkSeb\Common\JsonLog\JsonLog($container->get('config'));
-                },
-                'inspect' => function() use ($container) {
-                    return new \SimpleComplex\Inspect\Inspect($container->get('config'));
-                },
-            ]
-        );
+        // And set prepare base dependencies.
+        /**
+         * @var \KkSeb\Common\Cache\CacheBroker 'cache-broker'
+         * @var \KkSeb\Common\Config\IniSectionedConfig 'config'
+         * @var \KkSeb\Common\JsonLog\JsonLog 'logger' (or one passed by argument)
+         * @var \SimpleComplex\Inspect\Inspect 'inspect'
+         * @var \SimpleComplex\Locale\AbstractLocale 'locale'
+         */
+        Common::prepareBaseDependencies($container, $customLogger);
 
         // Fallback exception handler.
         set_exception_handler(function(\Throwable $throwable) use ($container) {
@@ -368,26 +363,7 @@ abstract class HttpServiceSlim extends HttpService
             };
         });
 
-        // Provide more generic dependencies.
-        Dependency::genericSetMultiple(
-            [
-                'locale' => function () use ($container) {
-                    return \KkSeb\Common\Locale\Locale::create($container->get('config'));
-                },
-            ]
-        );
-
         // Init Slim application.
         return new /*\Slim\*/App($container);
     }
-
-    /**
-     * @todo: important for HTTP response caching - user ID is not sufficient as qualification, because a new page load should mean new caches.
-     * @todo: Set responder which delivers X-KkSeb-Page-Load-Id sha256(uniqid()).
-     * @todo: frontend root app must ngInit() for page load ID, to be sent as header via interceptor.
-     * @todo: backend must set the page load ID as (persistent) cache item, so that later responders can check if it exists.
-     * @todo: weekend work :-( :-) because to much backend work to justify.
-     *
-     * @see \KkSeb\Common\Common::generatePageLoadId()
-     */
 }
