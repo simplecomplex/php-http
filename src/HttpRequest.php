@@ -1031,9 +1031,13 @@ class HttpRequest extends Explorable
 
             // Validation failure is 502 Bad Gateway.
             // Error is 500 Internal Server Error.
-            $response->headers['X-KkSeb-Http-Final-Status'] =
-            $response->status = $response->body->status =
-                ($this->code == HttpClient::ERROR_CODES['response-validation'] ? 502 : 500);
+            if ($this->code == HttpClient::ERROR_CODES['response-validation']) {
+                $response->status = 502;
+                $response->headers['X-KkSeb-Http-Response-Invalid'] = '1';
+            } else {
+                $response->status = 500;
+            }
+            $response->headers['X-KkSeb-Http-Final-Status'] = $response->body->status = $response->status;
 
             $response->body->success = false;
             $response->body->code = $this->code;
