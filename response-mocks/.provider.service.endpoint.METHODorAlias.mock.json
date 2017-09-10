@@ -3,8 +3,8 @@
 {
     "status": 200,
     "headers": {
-        "X-KkSeb-Http-Original-Status": 200,
-        "X-KkSeb-Http-Final-Status": 200
+        "X-Kk-Seb-Http-Original-Status": 200,
+        "X-Kk-Seb-Http-Final-Status": 200
     },
     //  KkSeb\Http\HttpResponseBody
     "body": {

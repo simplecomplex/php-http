@@ -166,7 +166,7 @@ class HttpClient extends Explorable
      * - anybody: for any user, default current user only
      * NB: cache is not per page/form, like Drupal
      * kk_seb_service_client.
-     * Would require that requestor sent a X-KkSeb-Page-Load-Id
+     * Would require that requestor sent a X-Kk-Seb-Page-Load-Id
      * header, based on an (backend cached) ID originally issued
      * by a local service; called by Angular root app ngOnit().
      *

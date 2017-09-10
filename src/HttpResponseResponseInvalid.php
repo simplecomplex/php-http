@@ -35,9 +35,9 @@ class HttpResponseResponseInvalid extends HttpResponse
         array $messages = []
     ) {
         $final_code = $code ? $code : HttpClient::ERROR_CODES['response-validation'] + HttpClient::ERROR_CODE_OFFSET;
-        $headers['X-KkSeb-Http-Final-Status'] = $final_status = $status ? $status : 502;
+        $headers['X-Kk-Seb-Http-Final-Status'] = $final_status = $status ? $status : 502;
         if ($messages) {
-            $headers['X-KkSeb-Http-Response-Invalid'] = str_replace(
+            $headers['X-Kk-Seb-Http-Response-Invalid'] = str_replace(
                 [
                     ':',
                     '[',
@@ -47,7 +47,7 @@ class HttpResponseResponseInvalid extends HttpResponse
                 join(' ', $messages)
             );
         } else {
-            $headers['X-KkSeb-Http-Response-Invalid'] = '1';
+            $headers['X-Kk-Seb-Http-Response-Invalid'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */

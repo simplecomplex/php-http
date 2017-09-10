@@ -35,7 +35,7 @@ class HttpResponseRequestUnauthorized extends HttpResponseRequestUnacceptable
         $final_code = $code ? $code : HttpService::ERROR_CODES['unauthorized'] + HttpService::ERROR_CODE_OFFSET;
         $final_status = $status ? $status : HttpService::STATUS_CODE['unauthorized'];
         if ($messages) {
-            $headers['X-KkSeb-Http-Request-Unathorized'] = str_replace(
+            $headers['X-Kk-Seb-Http-Request-Unathorized'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,7 +45,7 @@ class HttpResponseRequestUnauthorized extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-KkSeb-Http-Request-Unathorized'] = '1';
+            $headers['X-Kk-Seb-Http-Request-Unathorized'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */

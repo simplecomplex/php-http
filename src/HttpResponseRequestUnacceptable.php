@@ -35,7 +35,7 @@ class HttpResponseRequestUnacceptable extends HttpResponse
         $final_status = $status ? $status : HttpService::STATUS_CODE['request-unacceptable'];
 
         if (!$headers) {
-            $headers['X-KkSeb-Http-Request-Unacceptable'] = '1';
+            $headers['X-Kk-Seb-Http-Request-Unacceptable'] = '1';
         }
 
         if (!($final_body = $body)) {

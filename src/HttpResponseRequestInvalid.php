@@ -35,7 +35,7 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
         $final_code = $code ? $code : HttpService::ERROR_CODES['request-validation'] + HttpService::ERROR_CODE_OFFSET;
         $final_status = $status ? $status : HttpService::STATUS_CODE['request-validation'];
         if ($messages) {
-            $headers['X-KkSeb-Http-Request-Invalid'] = str_replace(
+            $headers['X-Kk-Seb-Http-Request-Invalid'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,7 +45,7 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-KkSeb-Http-Request-Invalid'] = '1';
+            $headers['X-Kk-Seb-Http-Request-Invalid'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */

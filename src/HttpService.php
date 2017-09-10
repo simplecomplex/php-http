@@ -113,17 +113,17 @@ abstract class HttpService
     ];
 
     /**
-     * Comma-separated list of sites.
+     * Comma-separated list of sites (including HTTP port).
      *
      * @var string
      */
-    protected static $crossOriginSitesAllowed;
+    protected static $crossOriginSiteAllowed;
 
     /**
-     * Cross origin sites allowed.
+     * Protocol + host + port of remote site, if allowed as cross origin.
      *
-     * Set as comma-separated list (no spaces) in file
-     * [document root]/.access_control_allow_origin
+     * Configured as comma-separated list (including HTTP port) in file
+     * [document root]/.cross_origin_allow_sites
      *
      * NB: cross origin sites allowed are valid for _all_ services.
      * If only some services should be exposed to cross origin, you'll have
@@ -131,12 +131,36 @@ abstract class HttpService
      *
      * @return string
      */
-    public static function crossOriginSitesAllowed() : string
+    public static function crossOriginSiteAllowed() : string
     {
-        if (static::$crossOriginSitesAllowed === null) {
-            $file = Utils::getInstance()->documentRoot() . '/.access_control_allow_origin';
-            static::$crossOriginSitesAllowed = !file_exists($file) ? '' : trim(file_get_contents($file));
+        if (static::$crossOriginSiteAllowed === null) {
+            $allow = '';
+            $utils = Utils::getInstance();
+            $file = $utils->documentRoot() . '/.cross_origin_allow_sites';
+            if (
+                file_exists($file)
+                && ($sites = trim(file_get_contents($file)))
+                && ($origin = $utils->getRequestHeader('Origin'))
+                && ($origin === filter_var(
+                    $origin,
+                    FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH
+                ))
+            ) {
+                // No port is 80.
+                $origin_port = $origin;
+                if (!strpos($origin_port, ':', 6)) {
+                    $origin_port .= ':80';
+                }
+                $sites = explode(',', str_replace(' ', '', $sites));
+                foreach ($sites as $host_port) {
+                    if ($host_port . (strpos($host_port, ':', 6) ? '' : ':80') === $origin_port) {
+                        $allow = $origin;
+                        break;
+                    }
+                }
+            }
+            static::$crossOriginSiteAllowed = $allow;
         }
-        return static::$crossOriginSitesAllowed;
+        return static::$crossOriginSiteAllowed;
     }
 }

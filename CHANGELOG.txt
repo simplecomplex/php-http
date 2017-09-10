@@ -1,3 +1,11 @@
+KkSeb/Http 1.x, 2017-09-10
+--------------------------
+- All 'Kk-Seb-' headers renamed; from 'KkSeb-'.
+- .cross_origin_allow_sites file renamed; from .access_control_allow_origin.
+- Cross origin Access-Control-Allow-Origin header must only be returned when
+  when such site requests, and only contain it's _own_ protocol, host and port;
+  and port only if request header Origin contains port.
+
 KkSeb/Http 1.x, 2017-09-03
 --------------------------
 - Slim initialization generalized and moved to HttpServiceSlim.

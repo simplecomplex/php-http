@@ -248,7 +248,7 @@ class HttpRequest extends Explorable
             if ($chbl === true) {
                 // NB: cache is not per page/form, like Drupal
                 // kk_seb_service_client.
-                // Would require that requestor sent a X-KkSeb-Page-Load-Id
+                // Would require that requestor sent a X-Kk-Seb-Page-Load-Id
                 // header, based on an (backend cached) ID originally issued
                 // by a local service; called by Angular root app ngOnit().
                 $this->cacheable['id'] .= User::get()->id . ']';
@@ -265,7 +265,7 @@ class HttpRequest extends Explorable
                 } else {
                     // NB: cache is not per page/form, like Drupal
                     // kk_seb_service_client.
-                    // Would require that requestor sent a X-KkSeb-Page-Load-Id
+                    // Would require that requestor sent a X-Kk-Seb-Page-Load-Id
                     // header, based on an (backend cached) ID originally issued
                     // by a local service; called by Angular root app ngOnit().
                     $this->cacheable['id'] .= User::get()->id . ']';
@@ -495,9 +495,9 @@ class HttpRequest extends Explorable
                     new HttpResponse(
                         $status,
                         [
-                            'X-KkSeb-Http-Original-Status' => $status,
+                            'X-Kk-Seb-Http-Original-Status' => $status,
                             // evaluate() may override final status.
-                            'X-KkSeb-Http-Final-Status' => $status,
+                            'X-Kk-Seb-Http-Final-Status' => $status,
                         ],
                         new HttpResponseBody(
                             true,
@@ -524,7 +524,7 @@ class HttpRequest extends Explorable
                 $return_headers = [];
             } else {
                 $return_headers = [
-                    'X-KkSeb-Http-Original-Status' => $status,
+                    'X-Kk-Seb-Http-Original-Status' => $status,
                 ];
             }
             $this->response = $this->evaluate(
@@ -643,7 +643,7 @@ class HttpRequest extends Explorable
                     break;
                 case 'request_timed_out':
                     // 504 Gateway Timeout.
-                    $response->headers['X-KkSeb-Http-Original-Status'] =
+                    $response->headers['X-Kk-Seb-Http-Original-Status'] =
                     $response->status = $body->status = 504;
                     $this->code = HttpClient::ERROR_CODES['timeout'];
                     break;
@@ -651,7 +651,7 @@ class HttpRequest extends Explorable
                 case 'connection_failed':
                     // 502 Bad Gateway.
                     // Perhaps upon retry (option: 'retry_on_unavailable').
-                    $response->headers['X-KkSeb-Http-Original-Status'] =
+                    $response->headers['X-Kk-Seb-Http-Original-Status'] =
                     $response->status = $body->status = 502;
                     $this->code = HttpClient::ERROR_CODES['host-unavailable'];
                     break;
@@ -686,7 +686,7 @@ class HttpRequest extends Explorable
                     $response->status = $body->status = 500;
                     $this->code = HttpClient::ERROR_CODES['unknown'];
             }
-            $response->headers['X-KkSeb-Http-Final-Status'] = $response->status;
+            $response->headers['X-Kk-Seb-Http-Final-Status'] = $response->status;
             // Set body 'code'.
             $body->code = $this->code;
         }
@@ -744,7 +744,7 @@ class HttpRequest extends Explorable
                     $body->success = false;
                     // Unexpecteds; set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
-                    $response->headers['X-KkSeb-Http-Final-Status'] =
+                    $response->headers['X-Kk-Seb-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['benign-status-unexpected'];
             }
@@ -758,7 +758,7 @@ class HttpRequest extends Explorable
                     $body->success = false;
                     // Set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
-                    $response->headers['X-KkSeb-Http-Final-Status'] =
+                    $response->headers['X-Kk-Seb-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['header-missing'];
                     break;
@@ -1033,11 +1033,11 @@ class HttpRequest extends Explorable
             // Error is 500 Internal Server Error.
             if ($this->code == HttpClient::ERROR_CODES['response-validation']) {
                 $response->status = 502;
-                $response->headers['X-KkSeb-Http-Response-Invalid'] = '1';
+                $response->headers['X-Kk-Seb-Http-Response-Invalid'] = '1';
             } else {
                 $response->status = 500;
             }
-            $response->headers['X-KkSeb-Http-Final-Status'] = $response->body->status = $response->status;
+            $response->headers['X-Kk-Seb-Http-Final-Status'] = $response->body->status = $response->status;
 
             $response->body->success = false;
             $response->body->code = $this->code;
@@ -1174,7 +1174,7 @@ class HttpRequest extends Explorable
         }
 
         if (!$this->code) {
-            $mock->headers['X-KkSeb-Http-Mock-Response'] = '1';
+            $mock->headers['X-Kk-Seb-Http-Mock-Response'] = '1';
             return [
                 true,
                 $mock

@@ -54,8 +54,7 @@ abstract class HttpServiceSlim extends HttpService
      */
     public static function routes($app)
     {
-        $cross_origin_sites_allowed = static::crossOriginSitesAllowed();
-        $set_cross_origin_options_routes = !!$cross_origin_sites_allowed;
+        $set_cross_origin_options_routes = static::crossOriginSiteAllowed();
 
         foreach (static::ROUTES as $route) {
             $method = $route[0];
@@ -96,7 +95,7 @@ abstract class HttpServiceSlim extends HttpService
      * Set Cross Origin headers, preferably only in development.
      *
      * Headers set:
-     * - Access-Control-Allow-Origin; allow those sites
+     * - Access-Control-Allow-Origin; allow this sites
      * - Access-Control-Expose-Headers; allow that requestor reads
      *   those response headers
      *
@@ -104,10 +103,10 @@ abstract class HttpServiceSlim extends HttpService
      * Angular serves from other host in development;
      * typically http://localhost:4200 (ng serve|npm start).
      *
-     * Allowed sites are set as comma-separated list (no spaces) in file
-     * [document root]/.access_control_allow_origin
+     * Allowed sites are set as comma-separated list (including HTTP port)
+     * in file [document root]/.cross_origin_allow_sites
      *
-     * @see HttpService::crossOriginSitesAllowed()
+     * @see HttpService::crossOriginSiteAllowed()
      *
      * @param \Slim\Http\Response $response
      *
@@ -115,13 +114,13 @@ abstract class HttpServiceSlim extends HttpService
      */
     public static function crossOriginSetHeaders(Response $response) : Response
     {
-        if (($sites_allowed = static::$crossOriginSitesAllowed)) {
+        if (($site_allowed = static::$crossOriginSiteAllowed)) {
             // Allow requestor to see all relevant response headers;
             // headers already set plus Content-Length (which Slim sets
             // before returning response to requestor.
             $response = $response->withHeader(
                 'Access-Control-Allow-Origin',
-                $sites_allowed
+                $site_allowed
             )->withHeader(
                 'Access-Control-Expose-Headers',
                 join(',', array_keys($response->getHeaders())) . ',Content-Length'
@@ -177,7 +176,7 @@ abstract class HttpServiceSlim extends HttpService
         Request $request,
         Response $response
     ) : Response {
-        if (static::$crossOriginSitesAllowed) {
+        if (static::$crossOriginSiteAllowed) {
             // Set Access-Control-Allow-Origin, Access-Control-Expose-Headers.
             $response = HttpServiceSlim::crossOriginSetHeaders($response);
             // If the request contains custom headers, they will be listed
@@ -277,7 +276,7 @@ abstract class HttpServiceSlim extends HttpService
                 }
                 try {
                     // Even error response may need Cross Origin headers.
-                    if (($cors_allowed_sites = HttpServiceSlim::crossOriginSitesAllowed())) {
+                    if (HttpServiceSlim::crossOriginSiteAllowed()) {
                         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
                             $response = HttpServiceSlim::crossOriginOptionsSetHeaders($request, $response);
                         } else {
@@ -334,7 +333,7 @@ abstract class HttpServiceSlim extends HttpService
                 }
                 try {
                     // Even error response may need Cross Origin headers.
-                    if (($cross_origin_sites_allowed = HttpServiceSlim::crossOriginSitesAllowed())) {
+                    if (HttpServiceSlim::crossOriginSiteAllowed()) {
                         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
                             $response = HttpServiceSlim::crossOriginOptionsSetHeaders($request, $response);
                         } else {
