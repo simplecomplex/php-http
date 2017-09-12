@@ -1,5 +1,10 @@
 ## KkSeb Http ##
 
+### Allowing Cross Origin requests ###
+
+Place a ```.cross_origin_allow_sites``` text file in document root, containing list allowed sites, like:  
+```http://localhost:4200,http://my-project.build.local.host:80```
+
 ### Relevant CLI commands ###
 
 

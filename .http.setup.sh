@@ -42,7 +42,7 @@ path_frontend=${doc_root}'/frontend'
 if [ ${environment} != 'prod' ]; then
     # Comma-separated list (including HTTP port).
     # Angular (ng serve, npm start): http://localhost:4200.
-    echo "http://localhost:4200,http://seb-my-cases.build.local.host" > ${doc_root}'/.cross_origin_allow_sites'
+    echo "http://localhost:4200" > ${doc_root}'/.cross_origin_allow_sites'
 fi
 
 
