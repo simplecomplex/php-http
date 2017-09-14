@@ -28,6 +28,11 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
  *
  * @uses-dependency-container cache-broker, locale, application-title
  *
+ * @cache-store http-response
+ * @cache-store http-response_validation-rule-set
+ * @cache-store http-response_mock
+ *      Names of cache stores used by this class.
+ *
  * @internal
  *
  * @property-read string $operation  provider.service.endpoint.METHODorAlias
