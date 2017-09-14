@@ -10,7 +10,6 @@ namespace KkSeb\Http;
 
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
-use SimpleComplex\Config\IniSectionedConfig;
 
 /**
  * Base class of all HTTP services, based on Slim
@@ -37,16 +36,10 @@ abstract class HttpService
     const DEPENDENCY_ID = 'http-service.unknown';
 
     /**
-     * @var IniSectionedConfig
+     * Provides application dependencies.
      */
-    protected $config;
-
-    /**
-     * @param IniSectionedConfig $config
-     */
-    protected function __construct(IniSectionedConfig $config)
+    protected function __construct()
     {
-        $this->config = $config;
         // Provide application dependencies, now that we know which application
         // receives the request.
         $container = Dependency::container();

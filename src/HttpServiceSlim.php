@@ -14,7 +14,6 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 
 use SimpleComplex\Utils\Dependency;
-use SimpleComplex\Config\IniSectionedConfig;
 
 use KkSeb\Common\Common;
 
@@ -69,11 +68,10 @@ abstract class HttpServiceSlim extends HttpService
     }
 
     /**
-     * @param IniSectionedConfig $config
      */
-    protected function __construct(IniSectionedConfig $config)
+    protected function __construct()
     {
-        parent::__construct($config);
+        parent::__construct();
     }
 
     /**
