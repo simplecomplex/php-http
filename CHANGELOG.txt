@@ -1,3 +1,8 @@
+KkSeb/Http 1.x, 2017-09-16
+--------------------------
+- Use standard method to send 403 Forbidden response, except when cause is real
+  unauthorized.
+
 KkSeb/Http 1.x, 2017-09-14
 --------------------------
 - HttpService/HttpServiceSlim obsolete constructor param config removed.

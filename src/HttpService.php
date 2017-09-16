@@ -52,6 +52,8 @@ abstract class HttpService
                     // if the solution's locale text ini file misses
                     // [some-application-id]
                     // application-title = Some Solution.
+                    // Non-solution services, like (kk-seb) user, will always
+                    // use common application title.
                     /** @var \SimpleComplex\Locale\AbstractLocale $locale */
                     $locale = $container->get('locale');
                     if (($text = $locale->text($application_id . ':application-title', [], ''))) {
@@ -97,12 +99,26 @@ abstract class HttpService
         // 401 Unauthorized.
         'unauthenticated' => 401,
         // 403 Forbidden.
+        'forbidden' => 403,
         'unauthorized' => 403,
         // Recommended values:
         // 400 Bad Request
         // 412 Precondition Failed
         // 422 Unprocessable Entity; WebDAV, but gaining support because exact.
         'request-validation' => 400,
+    ];
+
+    /**
+     * Make all but unauthorized 'forbidden' responses look the same.
+     *
+     * List of headers, except the 'body' bucket.
+     *
+     * @var string[]
+     */
+    const RESPONSE_FORBIDDEN = [
+        'Connection' => 'close',
+        'Content-Type' => 'text/plain',
+        'body' => 'Go away.'
     ];
 
     /**

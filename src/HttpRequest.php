@@ -26,7 +26,7 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
 /**
  * HTTP request, to be issued by HttpClient.
  *
- * @uses-dependency-container cache-broker, locale, application-title
+ * @uses-dependency-container cache-broker, locale, validate, application-title
  *
  * @cache-store http-response
  * @cache-store http-response_validation-rule-set
@@ -979,7 +979,7 @@ class HttpRequest extends Explorable
         // If no building from JSON, or no builts failed: do validate.
         if (!$this->code) {
             /** @var Validate $validate */
-            $validate = $container->has('validate') ? $container->get('validate') : new Validate();
+            $validate = $container->get('validate');
             $passed = false;
             $records = [];
             // Use rule sets by reference because Validate::challengeRecording()

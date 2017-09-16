@@ -68,6 +68,31 @@ abstract class HttpServiceSlim extends HttpService
     }
 
     /**
+     * Make all but unauthorized 'forbidden' responses look the same.
+     *
+     * @see HttpService::RESPONSE_FORBIDDEN
+     *
+     * @param Response $response
+     *
+     * @return Response
+     */
+    public function respondForbidden(Response $response) : Response
+    {
+        /** @var \Slim\Http\Response $response */
+        $response = $response->withStatus(static::STATUS_CODE['forbidden']);
+        // Copy.
+        $headers = static::RESPONSE_FORBIDDEN;
+        if (!empty($headers['body'])) {
+            $response->write($headers['body']);
+        }
+        unset($headers['body']);
+        foreach ($headers as $key => $val) {
+            $response = $response->withHeader($key, $val);
+        }
+        return $response;
+    }
+
+    /**
      */
     protected function __construct()
     {
@@ -225,6 +250,7 @@ abstract class HttpServiceSlim extends HttpService
          * @var \KkSeb\Common\JsonLog\JsonLog 'logger' (or one passed by argument)
          * @var \SimpleComplex\Inspect\Inspect 'inspect'
          * @var \SimpleComplex\Locale\AbstractLocale 'locale'
+         * @var \KkSeb\Common\Validate\Validate 'validate'
          */
         Common::prepareBaseDependencies($container, $customLogger);
 
