@@ -77,6 +77,8 @@ abstract class HttpServiceSlim extends HttpService
     /**
      * Send cache control response headers.
      *
+     * See also Typescript angular.kk-seb.common KkSebAbstractHttpService.
+     *
      * @param Response $response
      * @param int $timeToLive
      *      In seconds; default zero (prevent browser caching).
