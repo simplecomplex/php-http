@@ -68,6 +68,34 @@ abstract class HttpServiceSlim extends HttpService
     }
 
     /**
+     */
+    protected function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Send cache control response headers.
+     *
+     * @param Response $response
+     * @param int $timeToLive
+     *      In seconds; default zero (prevent browser caching).
+     *
+     * @return Response
+     *
+     * @throws \InvalidArgumentException
+     *      Propagated; arg timeToLive is negative.
+     */
+    public function cacheControl(Response $response, int $timeToLive = 0) : Response
+    {
+        $headers = $this->prepareCacheControlHeaders($timeToLive);
+        foreach ($headers as $key => $val) {
+            $response = $response->withHeader($key, $val);
+        }
+        return $response;
+    }
+
+    /**
      * Make all but unauthorized 'forbidden' responses look the same.
      *
      * @see HttpService::RESPONSE_FORBIDDEN
@@ -90,13 +118,6 @@ abstract class HttpServiceSlim extends HttpService
             $response = $response->withHeader($key, $val);
         }
         return $response;
-    }
-
-    /**
-     */
-    protected function __construct()
-    {
-        parent::__construct();
     }
 
     /**

@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-09-17
+--------------------------
+- Cache control response headers.
+
 KkSeb/Http 1.x, 2017-09-16
 --------------------------
 - Use standard method to send 403 Forbidden response, except when cause is real

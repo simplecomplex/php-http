@@ -122,6 +122,35 @@ abstract class HttpService
     ];
 
     /**
+     * Prepare cache control response headers.
+     *
+     * @param int $timeToLive
+     *      In seconds; default zero (prevent browser caching).
+     *
+     * @return array
+     *
+     * @throws \InvalidArgumentException
+     *      Arg timeTolive is negative.
+     */
+    protected function prepareCacheControlHeaders(int $timeToLive = 0) : array
+    {
+        if ($timeToLive < 0) {
+            throw new \InvalidArgumentException('Arg timeTolive[' . $timeToLive . '] is not non-negative integer.');
+        }
+        if (!$timeToLive) {
+            return [
+                'Cache-Control' => 'private, no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
+            ];
+        }
+        $time = !empty($_SERVER['REQUEST_TIME']) ? $_SERVER['REQUEST_TIME'] : time();
+        return [
+            'Cache-Control' => 'public, max-age=' . $timeToLive,
+            'Expires' => gmdate('D, d M Y H:i:s', ($time + $timeToLive)) . ' GMT',
+            'Last-modified' => gmdate('D, d M Y H:i:s', $time) . ' GMT',
+        ];
+    }
+
+    /**
      * Comma-separated list of sites (including HTTP port).
      *
      * @var string
