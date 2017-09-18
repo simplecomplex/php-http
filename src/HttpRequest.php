@@ -776,7 +776,8 @@ class HttpRequest extends Explorable
             // Log.
             $code_names = array_flip(HttpClient::ERROR_CODES);
             $this->httpLogger->log(
-                !empty($this->options['log_warning_on_status']['' . $this->response->status]) ? LOG_WARNING : LOG_ERR,
+                $this->response && !empty($this->options['log_warning_on_status']['' . $this->response->status]) ?
+                    LOG_WARNING : LOG_ERR,
                 'Http response',
                 new HttpResponseException(
                     'Response evaluates to HttpClient error[' . $code_names[$this->code] . '].',
