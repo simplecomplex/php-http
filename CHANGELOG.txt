@@ -1,6 +1,8 @@
 KkSeb/Http 1.x, 2017-09-18
 --------------------------
 - Frontend service error message headers.
+- HttpForwardableResponseException to handle service error that happen deep
+  within the framework.
 
 KkSeb/Http 1.x, 2017-09-17
 --------------------------
