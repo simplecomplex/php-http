@@ -1,3 +1,7 @@
+KkSeb/Http 1.x, 2017-09-18
+--------------------------
+- Frontend service error message headers.
+
 KkSeb/Http 1.x, 2017-09-17
 --------------------------
 - Cache control response headers.
