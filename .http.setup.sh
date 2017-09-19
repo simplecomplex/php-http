@@ -65,18 +65,23 @@ ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.frontend.ini' ${path_c
 
 ### Service response validation ########
 
-## Create rule-set dir
-mkdir -p ${path_conf}'/json/http/response-validation-rule-sets'
-
 ## Symlink dir of KkSeb/Http rule-sets.
+if [ ! -d ${path_conf}'/json/http/response-validation-rule-sets' ]; then
+    mkdir -p ${path_conf}'/json/http/response-validation-rule-sets'
+    sleep 1
+fi
 ln -s ${path_backend}'/vendor/kk-seb/http/response-validation-rule-sets' ${path_conf}'/json/http/response-validation-rule-sets/http'
 
 
 ### Service response mocks #############
-mkdir -p ${path_conf}'/json/http/response-mocks'
 
 ## Symlink dir of KkSeb/Http mocks.
+if [ ! -d ${path_conf}'/json/http/response-mocks' ]; then
+    mkdir -p ${path_conf}'/json/http/response-mocks'
+    sleep 1
+fi
 ln -s ${path_backend}'/vendor/kk-seb/http/response-mocks' ${path_conf}'/json/http/response-mocks/http'
+
 
 ### Refresh global configuration #######
 export PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SKIP_CONFIRM=1
