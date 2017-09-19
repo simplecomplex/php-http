@@ -20,11 +20,13 @@ class HttpForwardableResponseException extends HttpRuntimeException
     /**
      * @param string $message
      * @param int $code
+     * @param \Throwable|null $previous
      * @param \KkSeb\Http\HttpResponse $httpResponse
      */
-    public function __construct($message, $code, HttpResponse $httpResponse)
+    public function __construct(string $message, int $code, /*?\Throwable*/ $previous, HttpResponse $httpResponse)
     {
-        parent::__construct($message, $code, null);
+        parent::__construct($message, $code, $previous);
+        $this->httpResponse = $httpResponse;
     }
 
     /**

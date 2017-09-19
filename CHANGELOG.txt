@@ -3,6 +3,7 @@ KkSeb/Http 1.x, 2017-09-19
 - HttpServiceSlim set PHP warning/notice error handler.
   And fix that origin exception wasn't logged in an exception/error handler
   itself raised an exception.
+- HttpForwardableResponseException bugs.
 
 KkSeb/Http 1.x, 2017-09-18
 --------------------------
