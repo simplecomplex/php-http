@@ -51,7 +51,17 @@ class HttpResponseRequestUnacceptable extends HttpResponse
                 $final_status,
                 null,
                 $locale->text('http-service:error:reject', $replacers)
-                . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers),
+                . '\n'
+                // Cascading: application-id or common or base.
+                . $locale->text(
+                    $container->get('application-id') . ':error-suffix_user-report-error',
+                    $replacers,
+                    $locale->text(
+                        'common:error-suffix_user-report-error',
+                        $replacers,
+                        $locale->text('base:error-suffix_user-report-error', $replacers)
+                    )
+                ),
                 $final_code
             );
         }

@@ -59,7 +59,17 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
             $final_status,
             null,
             $locale->text('http-service:error:request-validation', $replacers)
-            . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers),
+            . '\n'
+            // Cascading: application-id or common or base.
+            . $locale->text(
+                $container->get('application-id') . ':error-suffix_user-report-error',
+                $replacers,
+                $locale->text(
+                    'common:error-suffix_user-report-error',
+                    $replacers,
+                    $locale->text('base:error-suffix_user-report-error', $replacers)
+                )
+            ),
             $final_code
         );
 

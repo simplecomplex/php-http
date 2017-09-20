@@ -606,7 +606,17 @@ class HttpRequest extends Explorable
             ];
             $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers);
+                . '\n'
+                // Cascading: application-id or common or base.
+                . $locale->text(
+                    $container->get('application-id') . ':error-suffix_user-report-error',
+                    $replacers,
+                    $locale->text(
+                        'common:error-suffix_user-report-error',
+                        $replacers,
+                        $locale->text('base:error-suffix_user-report-error', $replacers)
+                    )
+                );
 
             // Aborted is already logged.
             return $response;
@@ -807,7 +817,17 @@ class HttpRequest extends Explorable
                     break;
                 default:
                     // Deliberately '\n' not "\n".
-                    $body->message .= '\n' . $locale->text('base:error-suffix_user-report-error', $replacers);
+                    $body->message .= '\n'
+                        // Cascading: application-id or common or base.
+                        . $locale->text(
+                            $container->get('application-id') . ':error-suffix_user-report-error',
+                            $replacers,
+                            $locale->text(
+                                'common:error-suffix_user-report-error',
+                                $replacers,
+                                $locale->text('base:error-suffix_user-report-error', $replacers)
+                            )
+                        );
             }
         }
         elseif ($this->validateResponse) {
@@ -1060,7 +1080,17 @@ class HttpRequest extends Explorable
             ];
             $response->body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers);
+                . '\n'
+                // Cascading: application-id or common or base.
+                . $locale->text(
+                    $container->get('application-id') . ':error-suffix_user-report-error',
+                    $replacers,
+                    $locale->text(
+                        'common:error-suffix_user-report-error',
+                        $replacers,
+                        $locale->text('base:error-suffix_user-report-error', $replacers)
+                    )
+                );
         }
         else {
             // Flag that response has been validated, and passed.
@@ -1207,7 +1237,17 @@ class HttpRequest extends Explorable
                     null,
                     $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                     // Deliberately '\n' not "\n".
-                    . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers),
+                    . '\n'
+                    // Cascading: application-id or common or base.
+                    . $locale->text(
+                        $container->get('application-id') . ':error-suffix_user-report-error',
+                        $replacers,
+                        $locale->text(
+                            'common:error-suffix_user-report-error',
+                            $replacers,
+                            $locale->text('base:error-suffix_user-report-error', $replacers)
+                        )
+                    ),
                     $this->code
                 )
             )

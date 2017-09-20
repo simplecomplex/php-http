@@ -55,10 +55,16 @@ abstract class HttpService
                     // Non-solution services, will always use base title.
                     /** @var \SimpleComplex\Locale\AbstractLocale $locale */
                     $locale = $container->get('locale');
-                    if (($text = $locale->text($application_id . ':application-title', [], ''))) {
-                        return $text;
-                    }
-                    return $locale->text('base:application-title');
+                    // Cascading: application-id or common or base.
+                    return $locale->text(
+                        $application_id . ':application-title',
+                        [],
+                        $locale->text(
+                            'common:application-title',
+                            [],
+                            $locale->text('base:application-title')
+                        )
+                    );
                 }
             ]
         );
