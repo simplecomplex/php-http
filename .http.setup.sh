@@ -85,6 +85,6 @@ unset PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SILENT
 
 
 ### Success ############################
-echo -e "\n\033[01;32m[success]\033[0m"' KkBase Http setup successfully.'
+echo -e "\n\033[01;32m[success]\033[0m"' KkBase Http setup succeeded.'
 
 #### END #######################################################################
