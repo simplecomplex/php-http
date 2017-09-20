@@ -1,19 +1,19 @@
 <?php
 
-namespace KkSeb\Http\Exception;
+namespace KkBase\Http\Exception;
 
-use KkSeb\Http\HttpResponse;
+use KkBase\Http\HttpResponse;
 
 /**
  * Usable for forwarding a HttpResponse produced by HttpClient
  * upon a request or response error, happening deep within the framework.
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpForwardableResponseException extends HttpRuntimeException
 {
     /**
-     * @var \KkSeb\Http\HttpResponse
+     * @var \KkBase\Http\HttpResponse
      */
     protected $httpResponse;
 
@@ -21,7 +21,7 @@ class HttpForwardableResponseException extends HttpRuntimeException
      * @param string $message
      * @param int $code
      * @param \Throwable|null $previous
-     * @param \KkSeb\Http\HttpResponse $httpResponse
+     * @param \KkBase\Http\HttpResponse $httpResponse
      */
     public function __construct(string $message, int $code, /*?\Throwable*/ $previous, HttpResponse $httpResponse)
     {
@@ -30,7 +30,7 @@ class HttpForwardableResponseException extends HttpRuntimeException
     }
 
     /**
-     * @return \KkSeb\Http\HttpResponse
+     * @return \KkBase\Http\HttpResponse
      */
     public function getHttpResponse() : HttpResponse
     {

@@ -1,12 +1,12 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Dependency;
 
@@ -15,7 +15,7 @@ use SimpleComplex\Utils\Dependency;
  *
  * @uses-dependency-container locale, application-title
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
 {
@@ -35,7 +35,7 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
         $final_code = $code ? $code : HttpService::ERROR_CODES['request-validation'] + HttpService::ERROR_CODE_OFFSET;
         $final_status = $status ? $status : HttpService::STATUS_CODE['request-validation'];
         if ($messages) {
-            $headers['X-Kk-Seb-Http-Request-Invalid'] = str_replace(
+            $headers['X-Kk-Base-Http-Request-Invalid'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,7 +45,7 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-Kk-Seb-Http-Request-Invalid'] = '1';
+            $headers['X-Kk-Base-Http-Request-Invalid'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */
@@ -59,7 +59,7 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
             $final_status,
             null,
             $locale->text('http-service:error:request-validation', $replacers)
-            . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers),
+            . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers),
             $final_code
         );
 

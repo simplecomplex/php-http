@@ -1,12 +1,12 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
@@ -15,7 +15,7 @@ use SimpleComplex\Utils\Dependency;
  * Base class of all HTTP services, based on Slim
  * or other service exposure framework.
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 abstract class HttpService
 {
@@ -48,18 +48,17 @@ abstract class HttpService
             [
                 'application-id' => $application_id,
                 'application-title' => function () use ($container, $application_id) {
-                    // Use common application title as fallback,
+                    // Use base application title as fallback,
                     // if the solution's locale text ini file misses
                     // [some-application-id]
                     // application-title = Some Solution.
-                    // Non-solution services, like (kk-seb) user, will always
-                    // use common application title.
+                    // Non-solution services, will always use base title.
                     /** @var \SimpleComplex\Locale\AbstractLocale $locale */
                     $locale = $container->get('locale');
                     if (($text = $locale->text($application_id . ':application-title', [], ''))) {
                         return $text;
                     }
-                    return $locale->text('common:application-title');
+                    return $locale->text('base:application-title');
                 }
             ]
         );

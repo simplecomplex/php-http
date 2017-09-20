@@ -1,12 +1,12 @@
-// Will be cast to KkSeb\Http\HttpResponse.
+// Will be cast to KkBase\Http\HttpResponse.
 // JSON parser allows line comments; Utils->parseIniString().
 {
     "status": 200,
     "headers": {
-        "X-Kk-Seb-Http-Original-Status": 200,
-        "X-Kk-Seb-Http-Final-Status": 200
+        "X-Kk-Base-Http-Original-Status": 200,
+        "X-Kk-Base-Http-Final-Status": 200
     },
-    //  KkSeb\Http\HttpResponseBody
+    //  KkBase\Http\HttpResponseBody
     "body": {
         "success": true,
         "status": 200,

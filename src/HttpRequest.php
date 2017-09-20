@@ -1,12 +1,12 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
@@ -14,14 +14,14 @@ use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileListUnique;
 use SimpleComplex\RestMini\Client as RestMiniClient;
 use SimpleComplex\Validate\ValidationRuleSet;
-use KkSeb\Common\Cache\CacheBroker;
-use KkSeb\Common\Validate\Validate;
-use KkSeb\User\User;
-use KkSeb\Http\Exception\HttpLogicException;
-use KkSeb\Http\Exception\HttpConfigurationException;
-use KkSeb\Http\Exception\HttpRequestException;
-use KkSeb\Http\Exception\HttpResponseException;
-use KkSeb\Http\Exception\HttpResponseValidationException;
+use KkBase\Base\Cache\CacheBroker;
+use KkBase\Base\Validate\Validate;
+//use KkBase\Base\User; @todo
+use KkBase\Http\Exception\HttpLogicException;
+use KkBase\Http\Exception\HttpConfigurationException;
+use KkBase\Http\Exception\HttpRequestException;
+use KkBase\Http\Exception\HttpResponseException;
+use KkBase\Http\Exception\HttpResponseValidationException;
 
 /**
  * HTTP request, to be issued by HttpClient.
@@ -36,13 +36,13 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
  * @internal
  *
  * @property-read string $operation  provider.service.endpoint.METHODorAlias
- * @property-read \KkSeb\Http\HttpResponse $response
+ * @property-read \KkBase\Http\HttpResponse $response
  * @property-read int $code
  * @property-read bool $aborted
  * @property-read array $options
  * @property-read array $arguments
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpRequest extends Explorable
 {
@@ -122,7 +122,7 @@ class HttpRequest extends Explorable
     // Read-only members.-------------------------------------------------------
 
     /**
-     * @var \KkSeb\Http\HttpResponse
+     * @var \KkBase\Http\HttpResponse
      */
     protected $response;
 
@@ -191,7 +191,7 @@ class HttpRequest extends Explorable
     protected $httpLogger;
 
     /**
-     * @var \KkSeb\Common\Cache\FileCache|null
+     * @var \KkBase\Base\Cache\FileCache|null
      */
     protected $responseCacheStore;
 
@@ -253,7 +253,7 @@ class HttpRequest extends Explorable
             if ($chbl === true) {
                 // NB: cache is not per page/form, like Drupal
                 // kk_seb_service_client.
-                // Would require that requestor sent a X-Kk-Seb-Page-Load-Id
+                // Would require that requestor sent a X-Kk-Base-Page-Load-Id
                 // header, based on an (backend cached) ID originally issued
                 // by a local service; called by Angular root app ngOnit().
                 $this->cacheable['id'] .= User::get()->id . ']';
@@ -270,7 +270,7 @@ class HttpRequest extends Explorable
                 } else {
                     // NB: cache is not per page/form, like Drupal
                     // kk_seb_service_client.
-                    // Would require that requestor sent a X-Kk-Seb-Page-Load-Id
+                    // Would require that requestor sent a X-Kk-Base-Page-Load-Id
                     // header, based on an (backend cached) ID originally issued
                     // by a local service; called by Angular root app ngOnit().
                     $this->cacheable['id'] .= User::get()->id . ']';
@@ -283,7 +283,7 @@ class HttpRequest extends Explorable
             $container = Dependency::container();
             /** @var CacheBroker $cache_broker */
             $cache_broker = $container->get('cache-broker');
-            /** @var \KkSeb\Common\Cache\FileCache $cache_store */
+            /** @var \KkBase\Base\Cache\FileCache $cache_store */
             $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
                 'ttlDefault' => HttpClient::CACHEABLE_TIME_TO_LIVE,
             ]);
@@ -500,9 +500,9 @@ class HttpRequest extends Explorable
                     new HttpResponse(
                         $status,
                         [
-                            'X-Kk-Seb-Http-Original-Status' => $status,
+                            'X-Kk-Base-Http-Original-Status' => $status,
                             // evaluate() may override final status.
-                            'X-Kk-Seb-Http-Final-Status' => $status,
+                            'X-Kk-Base-Http-Final-Status' => $status,
                         ],
                         new HttpResponseBody(
                             true,
@@ -529,7 +529,7 @@ class HttpRequest extends Explorable
                 $return_headers = [];
             } else {
                 $return_headers = [
-                    'X-Kk-Seb-Http-Original-Status' => $status,
+                    'X-Kk-Base-Http-Original-Status' => $status,
                 ];
             }
             $this->response = $this->evaluate(
@@ -586,7 +586,7 @@ class HttpRequest extends Explorable
      *      Optional RestMini Client info. Only needed when apparantly
      *      successful response.
      *
-     * @return \KkSeb\Http\HttpResponse
+     * @return \KkBase\Http\HttpResponse
      */
     protected function evaluate(HttpResponse $response, array $error = [], array $info = []) : HttpResponse
     {
@@ -606,7 +606,7 @@ class HttpRequest extends Explorable
             ];
             $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers);
+                . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers);
 
             // Aborted is already logged.
             return $response;
@@ -648,7 +648,7 @@ class HttpRequest extends Explorable
                     break;
                 case 'request_timed_out':
                     // 504 Gateway Timeout.
-                    $response->headers['X-Kk-Seb-Http-Original-Status'] =
+                    $response->headers['X-Kk-Base-Http-Original-Status'] =
                     $response->status = $body->status = 504;
                     $this->code = HttpClient::ERROR_CODES['timeout'];
                     break;
@@ -656,7 +656,7 @@ class HttpRequest extends Explorable
                 case 'connection_failed':
                     // 502 Bad Gateway.
                     // Perhaps upon retry (option: 'retry_on_unavailable').
-                    $response->headers['X-Kk-Seb-Http-Original-Status'] =
+                    $response->headers['X-Kk-Base-Http-Original-Status'] =
                     $response->status = $body->status = 502;
                     $this->code = HttpClient::ERROR_CODES['host-unavailable'];
                     break;
@@ -691,7 +691,7 @@ class HttpRequest extends Explorable
                     $response->status = $body->status = 500;
                     $this->code = HttpClient::ERROR_CODES['unknown'];
             }
-            $response->headers['X-Kk-Seb-Http-Final-Status'] = $response->status;
+            $response->headers['X-Kk-Base-Http-Final-Status'] = $response->status;
             // Set body 'code'.
             $body->code = $this->code;
         }
@@ -749,7 +749,7 @@ class HttpRequest extends Explorable
                     $body->success = false;
                     // Unexpecteds; set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
-                    $response->headers['X-Kk-Seb-Http-Final-Status'] =
+                    $response->headers['X-Kk-Base-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['benign-status-unexpected'];
             }
@@ -763,7 +763,7 @@ class HttpRequest extends Explorable
                     $body->success = false;
                     // Set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
-                    $response->headers['X-Kk-Seb-Http-Final-Status'] =
+                    $response->headers['X-Kk-Base-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['header-missing'];
                     break;
@@ -807,7 +807,7 @@ class HttpRequest extends Explorable
                     break;
                 default:
                     // Deliberately '\n' not "\n".
-                    $body->message .= '\n' . $locale->text('common:error-suffix_user-report-error', $replacers);
+                    $body->message .= '\n' . $locale->text('base:error-suffix_user-report-error', $replacers);
             }
         }
         elseif ($this->validateResponse) {
@@ -869,7 +869,7 @@ class HttpRequest extends Explorable
         // should't be used in production.
         /** @var CacheBroker $cache_broker */
         $cache_broker = $container->get('cache-broker');
-        /** @var \KkSeb\Common\Cache\PersistentFileCache $cache_store */
+        /** @var \KkBase\Base\Cache\PersistentFileCache $cache_store */
         $rule_set_cache_store = $cache_broker->getStore(
             'http-response_validation-rule-set',
             // Allow length 128 keys.
@@ -1039,11 +1039,11 @@ class HttpRequest extends Explorable
             // Error is 500 Internal Server Error.
             if ($this->code == HttpClient::ERROR_CODES['response-validation']) {
                 $response->status = 502;
-                $response->headers['X-Kk-Seb-Http-Response-Invalid'] = '1';
+                $response->headers['X-Kk-Base-Http-Response-Invalid'] = '1';
             } else {
                 $response->status = 500;
             }
-            $response->headers['X-Kk-Seb-Http-Final-Status'] = $response->body->status = $response->status;
+            $response->headers['X-Kk-Base-Http-Final-Status'] = $response->body->status = $response->status;
 
             $response->body->success = false;
             $response->body->code = $this->code;
@@ -1060,7 +1060,7 @@ class HttpRequest extends Explorable
             ];
             $response->body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
-                . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers);
+                . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers);
         }
         else {
             // Flag that response has been validated, and passed.
@@ -1096,7 +1096,7 @@ class HttpRequest extends Explorable
         $container = Dependency::container();
         /** @var CacheBroker $cache_broker */
         $cache_broker = $container->get('cache-broker');
-        /** @var \KkSeb\Common\Cache\PersistentFileCache $cache_store */
+        /** @var \KkBase\Base\Cache\PersistentFileCache $cache_store */
         $mock_cache_store = $cache_broker->getStore(
             'http-response_mock',
             // Allow length 128 keys.
@@ -1180,7 +1180,7 @@ class HttpRequest extends Explorable
         }
 
         if (!$this->code) {
-            $mock->headers['X-Kk-Seb-Http-Mock-Response'] = '1';
+            $mock->headers['X-Kk-Base-Http-Mock-Response'] = '1';
             return [
                 true,
                 $mock
@@ -1207,7 +1207,7 @@ class HttpRequest extends Explorable
                     null,
                     $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                     // Deliberately '\n' not "\n".
-                    . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers),
+                    . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers),
                     $this->code
                 )
             )

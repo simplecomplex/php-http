@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Stop (don't exit) on error.
 #-------------------------------------------------------------------------------
-### Library: http
+### Library: kk-base/http
 ### PHP source dir: backend
 ### Angular source dir: frontend
 
@@ -46,42 +46,34 @@ if [ ${environment} != 'prod' ]; then
 fi
 
 
-### Configuration (global) #############
+### Configuration ######################
 
-## Symlink base configuration files.
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.global.ini' ${path_conf}'/ini/base/http.global.ini'
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http-services' ${path_conf}'/ini/base/http-services'
+## Symlink base configuration dir.
+ln -s ${path_backend}'/vendor/kk-base/http/config-ini/base' ${path_conf}'/ini/base/http'
 
-## Override configuration files
-# http.dev.override.global.ini vs. http.prod.override.global.ini.
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.'${environment}'.override.global.ini' ${path_conf}'/ini/override/http.'${environment}'.override.global.ini'
-
-
-### Configuration (frontend) ###########
-
-## Symlink frontend configuration file.
-ln -s ${path_backend}'/vendor/kk-seb/http/config-ini/http.frontend.ini' ${path_conf}'/ini/base/http.frontend.ini'
+## Symlink override configuration dir.
+ln -s ${path_backend}'/vendor/kk-base/http/config-ini/'${environment}'-override' ${path_conf}'/ini/override/http'
 
 
 ### Service response validation ########
 
-## Symlink dir of KkSeb/Http rule-sets.
+## Ensure rule-set directory.
 if [ ! -d ${path_conf}'/json/http/response-validation-rule-sets' ]; then
     mkdir -p ${path_conf}'/json/http/response-validation-rule-sets'
     sleep 1
 fi
-ln -s ${path_backend}'/vendor/kk-seb/http/response-validation-rule-sets' ${path_conf}'/json/http/response-validation-rule-sets/http'
 
 
 ### Service response mocks #############
 
-## Symlink dir of KkSeb/Http mocks.
+## Ensure mock directory.
 if [ ! -d ${path_conf}'/json/http/response-mocks' ]; then
     mkdir -p ${path_conf}'/json/http/response-mocks'
     sleep 1
 fi
-ln -s ${path_backend}'/vendor/kk-seb/http/response-mocks' ${path_conf}'/json/http/response-mocks/http'
 
+
+#### PHP CLI ###################################################################
 
 ### Refresh global configuration #######
 export PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SKIP_CONFIRM=1
@@ -93,6 +85,6 @@ unset PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SILENT
 
 
 ### Success ############################
-echo -e "\n\033[01;32m[success]\033[0m"' KkSeb Http setup successfully.'
+echo -e "\n\033[01;32m[success]\033[0m"' KkBase Http setup successfully.'
 
 #### END #######################################################################

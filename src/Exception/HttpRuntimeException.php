@@ -1,11 +1,11 @@
 <?php
 
-namespace KkSeb\Http\Exception;
+namespace KkBase\Http\Exception;
 
 /**
  * To detect runtime exception created by this library.
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpRuntimeException extends \RuntimeException implements HttpException
 {

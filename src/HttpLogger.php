@@ -1,16 +1,16 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
-use KkSeb\Http\Exception\HttpResponseValidationException;
+use KkBase\Http\Exception\HttpResponseValidationException;
 
 /**
  * Non a PSR logger, but uses such.
@@ -19,7 +19,7 @@ use KkSeb\Http\Exception\HttpResponseValidationException;
  *
  * @internal
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpLogger
 {

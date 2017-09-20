@@ -1,12 +1,12 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Dependency;
 
@@ -15,7 +15,7 @@ use SimpleComplex\Utils\Dependency;
  *
  * @uses-dependency-container locale, application-title
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
 {
@@ -35,7 +35,7 @@ class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
         $final_code = $code ? $code : HttpService::ERROR_CODES['unauthenticated'] + HttpService::ERROR_CODE_OFFSET;
         $final_status = $status ? $status : HttpService::STATUS_CODE['unauthenticated'];
         if ($messages) {
-            $headers['X-Kk-Seb-Http-Request-Unauthenticated'] = str_replace(
+            $headers['X-Kk-Base-Http-Request-Unauthenticated'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,7 +45,7 @@ class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-Kk-Seb-Http-Request-Unauthenticated'] = '1';
+            $headers['X-Kk-Base-Http-Request-Unauthenticated'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */

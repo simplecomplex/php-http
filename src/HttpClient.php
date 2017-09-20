@@ -1,18 +1,18 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\RestMini\Client as RestMiniClient;
-use KkSeb\Http\Exception\HttpConfigurationException;
+use KkBase\Http\Exception\HttpConfigurationException;
 
 /**
  * Methods of HttpClient and HttpRequest throw no exceptions.
@@ -21,9 +21,9 @@ use KkSeb\Http\Exception\HttpConfigurationException;
  * And use that HttpResponseBody's 'message' as safe and user-friendly error
  * message to user.
  *
- * @see \KkSeb\Http\HttpResponse::status
- * @see \KkSeb\Http\HttpResponseBody::success
- * @see \KkSeb\Http\HttpResponseBody::message
+ * @see \KkBase\Http\HttpResponse::status
+ * @see \KkBase\Http\HttpResponseBody::success
+ * @see \KkBase\Http\HttpResponseBody::message
  *
  * @uses-dependency-container config
  *
@@ -31,7 +31,7 @@ use KkSeb\Http\Exception\HttpConfigurationException;
  * @property-read string $service
  * @property-read \Throwable|null $initError
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpClient extends Explorable
 {
@@ -166,7 +166,7 @@ class HttpClient extends Explorable
      * - anybody: for any user, default current user only
      * NB: cache is not per page/form, like Drupal
      * kk_seb_service_client.
-     * Would require that requestor sent a X-Kk-Seb-Page-Load-Id
+     * Would require that requestor sent a X-Kk-Base-Page-Load-Id
      * header, based on an (backend cached) ID originally issued
      * by a local service; called by Angular root app ngOnit().
      *
@@ -292,7 +292,7 @@ class HttpClient extends Explorable
     protected $settings = [];
 
     /**
-     * @var \KkSeb\Common\Config\IniSectionedConfig
+     * @var \KkBase\Base\Config\IniSectionedConfig
      */
     protected $config;
 
@@ -353,7 +353,7 @@ class HttpClient extends Explorable
         $this->service = $service;
 
         $container = Dependency::container();
-        /** @var \KkSeb\Common\Config\IniSectionedConfig $config */
+        /** @var \KkBase\Base\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
 
         // Config section: http-provider_kki.
@@ -406,7 +406,7 @@ class HttpClient extends Explorable
      *      Numerically indexed is also supported.
      * @param array $options
      *
-     * @return \KkSeb\Http\HttpRequest
+     * @return \KkBase\Http\HttpRequest
      *
      * @uses HttpConfigurationException
      *      Un-configured endpoint or method.

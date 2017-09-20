@@ -1,19 +1,19 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Utils;
 
 /**
  * Http response.
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpResponse
 {
@@ -34,7 +34,7 @@ class HttpResponse
     /**
      * Body to be sent to requestor.
      *
-     * @var \KkSeb\Http\HttpResponseBody
+     * @var \KkBase\Http\HttpResponseBody
      */
     public $body;
 

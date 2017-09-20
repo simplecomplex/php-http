@@ -1,12 +1,12 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use SimpleComplex\Utils\Dependency;
 
@@ -17,7 +17,7 @@ use SimpleComplex\Utils\Dependency;
  *
  * @uses-dependency-container locale, application-title
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 class HttpResponseResponseInvalid extends HttpResponse
 {
@@ -35,9 +35,9 @@ class HttpResponseResponseInvalid extends HttpResponse
         array $messages = []
     ) {
         $final_code = $code ? $code : HttpClient::ERROR_CODES['response-validation'] + HttpClient::ERROR_CODE_OFFSET;
-        $headers['X-Kk-Seb-Http-Final-Status'] = $final_status = $status ? $status : 502;
+        $headers['X-Kk-Base-Http-Final-Status'] = $final_status = $status ? $status : 502;
         if ($messages) {
-            $headers['X-Kk-Seb-Http-Response-Invalid'] = str_replace(
+            $headers['X-Kk-Base-Http-Response-Invalid'] = str_replace(
                 [
                     ':',
                     '[',
@@ -47,7 +47,7 @@ class HttpResponseResponseInvalid extends HttpResponse
                 join(' ', $messages)
             );
         } else {
-            $headers['X-Kk-Seb-Http-Response-Invalid'] = '1';
+            $headers['X-Kk-Base-Http-Response-Invalid'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */
@@ -65,7 +65,7 @@ class HttpResponseResponseInvalid extends HttpResponse
                 $final_status,
                 null,
                 $locale->text('http-client:error:response-validation', $replacers)
-                . '\n' . $locale->text('common:error-suffix_user-report-error', $replacers),
+                . '\n' . $locale->text('base:error-suffix_user-report-error', $replacers),
                 $final_code
             )
         );

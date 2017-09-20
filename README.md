@@ -1,4 +1,4 @@
-## KkSeb Http ##
+## KkBase Http ##
 
 ### Allowing Cross Origin requests ###
 
@@ -49,8 +49,7 @@ php cli.phpsh cache-delete http-response_mock prvdr.srvc.ndpnt.mthd
 ### Requirements ###
 
 - PHP >=7.0
-- [KkSeb Common](https://kkgit.kk.dk/php-psr.kk-seb/common)
-- [KkSeb User](https://kkgit.kk.dk/php-psr.kk-seb/user)
+- [KkBase Base](https://kkgit.kk.dk/php-psr.kk-base/base)
 - [SimpleComplex RestMini](https://github.com/simplecomplex/restmini)
 - [SimpleComplex Inspect](https://github.com/simplecomplex/inspect)
 - [SimpleComplex Utils](https://github.com/simplecomplex/php-utils)

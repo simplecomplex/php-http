@@ -1,12 +1,12 @@
 <?php
 /**
  * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-seb/http
+ * @link https://kkgit.kk.dk/php-psr.kk-base/http
  * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
  */
 declare(strict_types=1);
 
-namespace KkSeb\Http;
+namespace KkBase\Http;
 
 use Slim\Container;
 use Slim\App;
@@ -15,7 +15,7 @@ use Slim\Http\Response;
 
 use SimpleComplex\Utils\Dependency;
 
-use KkSeb\Common\Common;
+use KkBase\Base\Base;
 
 /**
  * Slim HTTP service (route responder) base class.
@@ -23,7 +23,7 @@ use KkSeb\Common\Common;
  * See the bootstrapper.
  * @see HttpServiceSlim::bootstrap()
  *
- * @package KkSeb\Http
+ * @package KkBase\Http
  */
 abstract class HttpServiceSlim extends HttpService
 {
@@ -77,7 +77,7 @@ abstract class HttpServiceSlim extends HttpService
     /**
      * Send cache control response headers.
      *
-     * See also Typescript angular.kk-seb.common KkSebAbstractHttpService.
+     * See also Typescript angular.kk-base.base KkBaseAbstractHttpService.
      *
      * @param Response $response
      * @param int $timeToLive
@@ -264,18 +264,18 @@ abstract class HttpServiceSlim extends HttpService
 
         // Pass Slim container to SimpleComplex Dependency container.
         // The Slim container itself is still usable directly.
-        // KkSeb and SimpleComplex classes use the container via Dependency,
+        // KkBase and SimpleComplex classes use the container via Dependency,
         // to avoid dependency of a particular PSR Container (like Slim's).
         // And set prepare base dependencies.
         /**
-         * @var \KkSeb\Common\Cache\CacheBroker 'cache-broker'
-         * @var \KkSeb\Common\Config\IniSectionedConfig 'config'
-         * @var \KkSeb\Common\JsonLog\JsonLog 'logger' (or one passed by argument)
+         * @var \KkBase\Base\Cache\CacheBroker 'cache-broker'
+         * @var \KkBase\Base\Config\IniSectionedConfig 'config'
+         * @var \KkBase\Base\JsonLog\JsonLog 'logger' (or one passed by argument)
          * @var \SimpleComplex\Inspect\Inspect 'inspect'
          * @var \SimpleComplex\Locale\AbstractLocale 'locale'
-         * @var \KkSeb\Common\Validate\Validate 'validate'
+         * @var \KkBase\Base\Validate\Validate 'validate'
          */
-        Common::prepareBaseDependencies($container, $customLogger);
+        Base::prepareBaseDependencies($container, $customLogger);
 
         // Fallback exception handler.
         set_exception_handler(function(\Throwable $throwable) use ($container) {
@@ -422,7 +422,7 @@ abstract class HttpServiceSlim extends HttpService
                 /**
                  * Send status 200, pass real success+status in response body.
                  *
-                 * @see \KkSeb\Http\HttpResponseBody
+                 * @see \KkBase\Http\HttpResponseBody
                  */
                 $response->write(
                     json_encode([
@@ -485,7 +485,7 @@ abstract class HttpServiceSlim extends HttpService
                 /**
                  * Send status 200, pass real success+status in response body.
                  *
-                 * @see \KkSeb\Http\HttpResponseBody
+                 * @see \KkBase\Http\HttpResponseBody
                  */
                 $response->write(
                     json_encode([

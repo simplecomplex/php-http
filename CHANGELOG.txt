@@ -1,3 +1,9 @@
+KkBase/Http 1.x, 2017-09-20
+---------------------------
+- Package moved from 'seb' to 'base'; git group (was php-psr.kk-seb)
+  and namespace (was kk-seb, KkSeb).
+- All custom headers renamed to X-Kk-Base-Http; from X-Kk-Seb-Http.
+
 KkSeb/Http 1.x, 2017-09-19
 --------------------------
 - HttpServiceSlim set PHP warning/notice error handler.
