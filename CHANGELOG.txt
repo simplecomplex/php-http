@@ -1,3 +1,8 @@
+KkBase/Http 1.x, 2017-09-22
+---------------------------
+- Config and locale-text no longer risk that dupe key scalar values become array
+  Removed warnings from documentation.
+
 KkBase/Http 1.x, 2017-09-20
 ---------------------------
 - Package moved from 'seb' to 'base'; git group (was php-psr.kk-seb)
