@@ -1,12 +1,12 @@
-// Will be cast to KkBase\Http\HttpResponse.
+// Will be cast to SimpleComplex\Http\HttpResponse.
 // JSON parser allows line comments; Utils->parseIniString().
 {
     "status": 200,
     "headers": {
-        "X-Kk-Base-Http-Original-Status": 200,
-        "X-Kk-Base-Http-Final-Status": 200
+        "X-Http-Original-Status": 200,
+        "X-Http-Final-Status": 200
     },
-    //  KkBase\Http\HttpResponseBody
+    //  SimpleComplex\Http\HttpResponseBody
     "body": {
         "success": true,
         "status": 200,

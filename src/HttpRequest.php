@@ -1,12 +1,13 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
@@ -14,14 +15,11 @@ use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileListUnique;
 use SimpleComplex\RestMini\Client as RestMiniClient;
 use SimpleComplex\Validate\ValidationRuleSet;
-use KkBase\Base\Cache\CacheBroker;
-use KkBase\Base\Validate\Validate;
-//use KkBase\Base\User; @todo
-use KkBase\Http\Exception\HttpLogicException;
-use KkBase\Http\Exception\HttpConfigurationException;
-use KkBase\Http\Exception\HttpRequestException;
-use KkBase\Http\Exception\HttpResponseException;
-use KkBase\Http\Exception\HttpResponseValidationException;
+use SimpleComplex\Http\Exception\HttpLogicException;
+use SimpleComplex\Http\Exception\HttpConfigurationException;
+use SimpleComplex\Http\Exception\HttpRequestException;
+use SimpleComplex\Http\Exception\HttpResponseException;
+use SimpleComplex\Http\Exception\HttpResponseValidationException;
 
 /**
  * HTTP request, to be issued by HttpClient.
@@ -36,13 +34,13 @@ use KkBase\Http\Exception\HttpResponseValidationException;
  * @internal
  *
  * @property-read string $operation  provider.service.endpoint.METHODorAlias
- * @property-read \KkBase\Http\HttpResponse $response
+ * @property-read \SimpleComplex\Http\HttpResponse $response
  * @property-read int $code
  * @property-read bool $aborted
  * @property-read array $options
  * @property-read array $arguments
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpRequest extends Explorable
 {
@@ -102,6 +100,11 @@ class HttpRequest extends Explorable
     // Business.----------------------------------------------------------------
 
     /**
+     * @var string
+     */
+    const CLASS_CACHE_BROKER = \SimpleComplex\Cache\CacheBroker::class;
+
+    /**
      * Path to where response validation rule set .json-files reside.
      *
      * Relative path is relative to document root.
@@ -122,7 +125,7 @@ class HttpRequest extends Explorable
     // Read-only members.-------------------------------------------------------
 
     /**
-     * @var \KkBase\Http\HttpResponse
+     * @var \SimpleComplex\Http\HttpResponse
      */
     protected $response;
 
@@ -191,7 +194,7 @@ class HttpRequest extends Explorable
     protected $httpLogger;
 
     /**
-     * @var \KkBase\Base\Cache\FileCache|null
+     * @var \SimpleComplex\Cache\FileCache|null
      */
     protected $responseCacheStore;
 
@@ -244,19 +247,21 @@ class HttpRequest extends Explorable
             empty($this->options['mock_response'])
             && !empty($options['cacheable'])
         ) {
+            $container = Dependency::container();
+            /** @var HttpSettings $http_settings */
+            $http_settings = $container->get('http-settings');
+
             $chbl = $options['cacheable'];
             $this->cacheable = [
-                'ttl' => HttpClient::CACHEABLE_TIME_TO_LIVE,
+                'ttl' => $http_settings->client('cacheable_time_to_live'),
                 'id' => $properties['operation'] . '[user-',
                 'refresh' => false,
             ];
             if ($chbl === true) {
-                // NB: cache is not per page/form, like Drupal
-                // kk_seb_service_client.
-                // Would require that requestor sent a X-Kk-Base-Page-Load-Id
+                // Would require that requestor sent a X-Page-Load-Id
                 // header, based on an (backend cached) ID originally issued
                 // by a local service; called by Angular root app ngOnit().
-                $this->cacheable['id'] .= User::get()->id . ']';
+                $this->cacheable['id'] .= $this->userId() . ']';
             } else {
                 if (!empty($chbl['ttl'])) {
                     $this->cacheable['ttl'] = $chbl['ttl'];
@@ -268,25 +273,25 @@ class HttpRequest extends Explorable
                      */
                     $this->cacheable['id'] .= '.]';
                 } else {
-                    // NB: cache is not per page/form, like Drupal
-                    // kk_seb_service_client.
-                    // Would require that requestor sent a X-Kk-Base-Page-Load-Id
+                    // Would require that requestor sent a X-Page-Load-Id
                     // header, based on an (backend cached) ID originally issued
                     // by a local service; called by Angular root app ngOnit().
-                    $this->cacheable['id'] .= User::get()->id . ']';
+                    $this->cacheable['id'] .= $this->userId() . ']';
                 }
                 if (!empty($chbl['refresh'])) {
                     $this->cacheable['refresh'] = true;
                 }
             }
             unset($chbl);
-            $container = Dependency::container();
-            /** @var CacheBroker $cache_broker */
+            /** @var \SimpleComplex\Cache\CacheBroker $cache_broker */
             $cache_broker = $container->get('cache-broker');
-            /** @var \KkBase\Base\Cache\FileCache $cache_store */
-            $this->responseCacheStore = $cache_broker->getStore('http-response', CacheBroker::CACHE_VARIABLE_TTL, [
-                'ttlDefault' => HttpClient::CACHEABLE_TIME_TO_LIVE,
-            ]);
+            /** @var \SimpleComplex\Cache\FileCache $cache_store */
+            $this->responseCacheStore = $cache_broker->getStore(
+                'http-response', constant(static::CLASS_CACHE_BROKER . '::CACHE_VARIABLE_TTL'),
+                [
+                    'ttlDefault' => $http_settings->client('cacheable_time_to_live'),
+                ]
+            );
             unset($cache_broker);
 
             // Get cached if exists and not to be refreshed.
@@ -500,9 +505,9 @@ class HttpRequest extends Explorable
                     new HttpResponse(
                         $status,
                         [
-                            'X-Kk-Base-Http-Original-Status' => $status,
+                            'X-Http-Original-Status' => $status,
                             // evaluate() may override final status.
-                            'X-Kk-Base-Http-Final-Status' => $status,
+                            'X-Http-Final-Status' => $status,
                         ],
                         new HttpResponseBody(
                             true,
@@ -529,7 +534,7 @@ class HttpRequest extends Explorable
                 $return_headers = [];
             } else {
                 $return_headers = [
-                    'X-Kk-Base-Http-Original-Status' => $status,
+                    'X-Http-Original-Status' => $status,
                 ];
             }
             $this->response = $this->evaluate(
@@ -564,6 +569,16 @@ class HttpRequest extends Explorable
     }
 
     /**
+     * Get currently logged-in user's ID, or session ID.
+     *
+     * @return string
+     */
+    protected function userId() : string
+    {
+        return '';
+    }
+
+    /**
      * Evaluates response object and modifies it if response status
      * or arg error suggests that i. request failed or ii. response is faulty.
      *
@@ -586,7 +601,7 @@ class HttpRequest extends Explorable
      *      Optional RestMini Client info. Only needed when apparantly
      *      successful response.
      *
-     * @return \KkBase\Http\HttpResponse
+     * @return \SimpleComplex\Http\HttpResponse
      */
     protected function evaluate(HttpResponse $response, array $error = [], array $info = []) : HttpResponse
     {
@@ -598,23 +613,26 @@ class HttpRequest extends Explorable
             $body->code = $this->code;
             $code_names = array_flip(HttpClient::ERROR_CODES);
             $container = Dependency::container();
+            /** @var HttpSettings $http_settings */
+            $http_settings = $container->get('http-settings');
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = $container->get('locale');
             $replacers = [
-                'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+                'error' => ($this->code + $http_settings->client('error_code_offset'))
+                    . ':http:' . $code_names[$this->code],
                 'application-title' => $container->get('application-title'),
             ];
             $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
                 . '\n'
-                // Cascading: application-id or common or base.
+                // Regressive: application-id or common or http.
                 . $locale->text(
                     $container->get('application-id') . ':error-suffix_user-report-error',
                     $replacers,
                     $locale->text(
                         'common:error-suffix_user-report-error',
                         $replacers,
-                        $locale->text('base:error-suffix_user-report-error', $replacers)
+                        $locale->text('http:error-suffix_user-report-error', $replacers)
                     )
                 );
 
@@ -658,7 +676,7 @@ class HttpRequest extends Explorable
                     break;
                 case 'request_timed_out':
                     // 504 Gateway Timeout.
-                    $response->headers['X-Kk-Base-Http-Original-Status'] =
+                    $response->headers['X-Http-Original-Status'] =
                     $response->status = $body->status = 504;
                     $this->code = HttpClient::ERROR_CODES['timeout'];
                     break;
@@ -666,7 +684,7 @@ class HttpRequest extends Explorable
                 case 'connection_failed':
                     // 502 Bad Gateway.
                     // Perhaps upon retry (option: 'retry_on_unavailable').
-                    $response->headers['X-Kk-Base-Http-Original-Status'] =
+                    $response->headers['X-Http-Original-Status'] =
                     $response->status = $body->status = 502;
                     $this->code = HttpClient::ERROR_CODES['host-unavailable'];
                     break;
@@ -701,7 +719,7 @@ class HttpRequest extends Explorable
                     $response->status = $body->status = 500;
                     $this->code = HttpClient::ERROR_CODES['unknown'];
             }
-            $response->headers['X-Kk-Base-Http-Final-Status'] = $response->status;
+            $response->headers['X-Http-Final-Status'] = $response->status;
             // Set body 'code'.
             $body->code = $this->code;
         }
@@ -759,7 +777,7 @@ class HttpRequest extends Explorable
                     $body->success = false;
                     // Unexpecteds; set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
-                    $response->headers['X-Kk-Base-Http-Final-Status'] =
+                    $response->headers['X-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['benign-status-unexpected'];
             }
@@ -773,7 +791,7 @@ class HttpRequest extends Explorable
                     $body->success = false;
                     // Set to Bad Gateway, not our fault.
                     // But keep the the original status on $body->status.
-                    $response->headers['X-Kk-Base-Http-Final-Status'] =
+                    $response->headers['X-Http-Final-Status'] =
                     $response->status = 502;
                     $this->code = HttpClient::ERROR_CODES['header-missing'];
                     break;
@@ -783,6 +801,9 @@ class HttpRequest extends Explorable
 
         // Handle error.
         if ($this->code) {
+            $container = Dependency::container();
+            /** @var HttpSettings $http_settings */
+            $http_settings = $container->get('http-settings');
             // Log.
             $code_names = array_flip(HttpClient::ERROR_CODES);
             $this->httpLogger->log(
@@ -791,7 +812,7 @@ class HttpRequest extends Explorable
                 'Http response',
                 new HttpResponseException(
                     'Response evaluates to HttpClient error[' . $code_names[$this->code] . '].',
-                    $this->code + HttpClient::ERROR_CODE_OFFSET
+                    $this->code + $http_settings->client('error_code_offset')
                 ),
                 [
                     'final status' => $response->status,
@@ -806,7 +827,8 @@ class HttpRequest extends Explorable
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = $container->get('locale');
             $replacers = [
-                'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+                'error' => ($this->code + $http_settings->client('error_code_offset'))
+                    . ':http:' . $code_names[$this->code],
                 'application-title' => $container->get('application-title'),
             ];
             $body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers);
@@ -818,14 +840,14 @@ class HttpRequest extends Explorable
                 default:
                     // Deliberately '\n' not "\n".
                     $body->message .= '\n'
-                        // Cascading: application-id or common or base.
+                        // Regressive: application-id or common or http.
                         . $locale->text(
                             $container->get('application-id') . ':error-suffix_user-report-error',
                             $replacers,
                             $locale->text(
                                 'common:error-suffix_user-report-error',
                                 $replacers,
-                                $locale->text('base:error-suffix_user-report-error', $replacers)
+                                $locale->text('http:error-suffix_user-report-error', $replacers)
                             )
                         );
             }
@@ -887,13 +909,13 @@ class HttpRequest extends Explorable
 
         // Get cache broker even if no_cache_rules; truthy no_cache_rules
         // should't be used in production.
-        /** @var CacheBroker $cache_broker */
+        /** @var \SimpleComplex\Cache\CacheBroker $cache_broker */
         $cache_broker = $container->get('cache-broker');
-        /** @var \KkBase\Base\Cache\PersistentFileCache $cache_store */
+        /** @var \SimpleComplex\Cache\PersistentFileCache $cache_store */
         $rule_set_cache_store = $cache_broker->getStore(
             'http-response_validation-rule-set',
             // Allow length 128 keys.
-            CacheBroker::CACHE_KEY_LONG_PERSISTENT
+            constant(static::CLASS_CACHE_BROKER . '::CACHE_KEY_LONG_PERSISTENT')
         );
         unset($cache_broker);
 
@@ -921,6 +943,8 @@ class HttpRequest extends Explorable
         // If any to build from JSON.
         if ($read_filenames) {
             // Retrieve JSON files from validation rule set path.
+            /** @var HttpSettings $http_settings */
+            $http_settings = $container->get('http-settings');
             $utils = Utils::getInstance();
             $path = '';
             try {
@@ -944,7 +968,7 @@ class HttpRequest extends Explorable
                             get_class($this) . '::PATH_VALIDATION_RULE_SET path['
                             . static::PATH_VALIDATION_RULE_SET . '] have no files of variants['
                             . join(', ', array_keys($read_filenames)) . '] as children or descendants.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET
+                            $this->code + $http_settings->client('error_code_offset')
                         ),
                         [
                             'files missing' => $read_filenames,
@@ -965,7 +989,7 @@ class HttpRequest extends Explorable
                     'Http validate response',
                     new HttpConfigurationException(
                         'A rule set JSON file is not parsable, see previous.',
-                        $this->code + HttpClient::ERROR_CODE_OFFSET,
+                        $this->code + $http_settings->client('error_code_offset'),
                         $xcptn
                     )
                 );
@@ -978,7 +1002,7 @@ class HttpRequest extends Explorable
                         new HttpLogicException(
                             get_class($this) . '::PATH_VALIDATION_RULE_SET path['
                             . static::PATH_VALIDATION_RULE_SET . '] is not a valid path.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
                         )
                     );
@@ -989,7 +1013,7 @@ class HttpRequest extends Explorable
                         'Http validate response',
                         new HttpConfigurationException(
                             'Some rule set JSON file is non-unique, non-existent or unreadable, see previous.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
                         )
                     );
@@ -999,7 +1023,7 @@ class HttpRequest extends Explorable
 
         // If no building from JSON, or no builts failed: do validate.
         if (!$this->code) {
-            /** @var Validate $validate */
+            /** @var \SimpleComplex\Validate\Validate $validate */
             $validate = $container->get('validate');
             $passed = false;
             $records = [];
@@ -1028,13 +1052,15 @@ class HttpRequest extends Explorable
             }
 
             if (!$passed) {
+                /** @var HttpSettings $http_settings */
+                $http_settings = $container->get('http-settings');
                 $this->code = HttpClient::ERROR_CODES['response-validation'];
                 $this->httpLogger->log(
                     LOG_ERR,
                     'Http validate response',
                     new HttpResponseValidationException(
                         'Response failed validation.',
-                        $this->code + HttpClient::ERROR_CODE_OFFSET
+                        $this->code + $http_settings->client('error_code_offset')
                     ),
                     $records
                 );
@@ -1059,11 +1085,11 @@ class HttpRequest extends Explorable
             // Error is 500 Internal Server Error.
             if ($this->code == HttpClient::ERROR_CODES['response-validation']) {
                 $response->status = 502;
-                $response->headers['X-Kk-Base-Http-Response-Invalid'] = '1';
+                $response->headers['X-Http-Response-Invalid'] = '1';
             } else {
                 $response->status = 500;
             }
-            $response->headers['X-Kk-Base-Http-Final-Status'] = $response->body->status = $response->status;
+            $response->headers['X-Http-Final-Status'] = $response->body->status = $response->status;
 
             $response->body->success = false;
             $response->body->code = $this->code;
@@ -1071,24 +1097,26 @@ class HttpRequest extends Explorable
             $response->body->data = null;
             // Set body 'message'.
             $code_names = array_flip(HttpClient::ERROR_CODES);
-            $container = Dependency::container();
+            /** @var HttpSettings $http_settings */
+            $http_settings = $container->get('http-settings');
             /** @var \SimpleComplex\Locale\AbstractLocale $locale */
             $locale = $container->get('locale');
             $replacers = [
-                'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+                'error' => ($this->code + $http_settings->client('error_code_offset'))
+                    . ':http:' . $code_names[$this->code],
                 'application-title' => $container->get('application-title'),
             ];
             $response->body->message = $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                 // Deliberately '\n' not "\n".
                 . '\n'
-                // Cascading: application-id or common or base.
+                // Regressive: application-id or common or http.
                 . $locale->text(
                     $container->get('application-id') . ':error-suffix_user-report-error',
                     $replacers,
                     $locale->text(
                         'common:error-suffix_user-report-error',
                         $replacers,
-                        $locale->text('base:error-suffix_user-report-error', $replacers)
+                        $locale->text('http:error-suffix_user-report-error', $replacers)
                     )
                 );
         }
@@ -1124,13 +1152,15 @@ class HttpRequest extends Explorable
     protected function mock(string $variant, $noCacheMock = false) : array
     {
         $container = Dependency::container();
-        /** @var CacheBroker $cache_broker */
+        /** @var HttpSettings $http_settings */
+        $http_settings = $container->get('http-settings');
+        /** @var \SimpleComplex\Cache\CacheBroker $cache_broker */
         $cache_broker = $container->get('cache-broker');
-        /** @var \KkBase\Base\Cache\PersistentFileCache $cache_store */
+        /** @var \SimpleComplex\Cache\PersistentFileCache $cache_store */
         $mock_cache_store = $cache_broker->getStore(
             'http-response_mock',
             // Allow length 128 keys.
-            CacheBroker::CACHE_KEY_LONG_PERSISTENT
+            constant(static::CLASS_CACHE_BROKER . '::CACHE_KEY_LONG_PERSISTENT')
         );
         unset($cache_broker);
 
@@ -1156,7 +1186,7 @@ class HttpRequest extends Explorable
                         new HttpConfigurationException(
                             get_class($this) . '::PATH_MOCK path['
                             . static::PATH_MOCK . '] have no file of variant[' . $variant . '] as child or descendant.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET
+                            $this->code + $http_settings->client('error_code_offset')
                         ),
                         [
                             'file required' => $base_name . '.mock.json',
@@ -1174,7 +1204,7 @@ class HttpRequest extends Explorable
                     'Http mock response',
                     new HttpConfigurationException(
                         'Mock JSON file is not parsable, see previous.',
-                        $this->code + HttpClient::ERROR_CODE_OFFSET,
+                        $this->code + $http_settings->client('error_code_offset'),
                         $xcptn
                     )
                 );
@@ -1186,7 +1216,7 @@ class HttpRequest extends Explorable
                         'Http mock response',
                         new HttpLogicException(
                             get_class($this) . '::PATH_MOCK path[' . static::PATH_MOCK . '] is not a valid path.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
                         )
                     );
@@ -1198,7 +1228,7 @@ class HttpRequest extends Explorable
                         new HttpConfigurationException(
                             'Mock JSON file is non-unique, non-existent, unreadable or can\'t be cast to HttpResponse'
                             . ', see previous.',
-                            $this->code + HttpClient::ERROR_CODE_OFFSET,
+                            $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
                         )
                     );
@@ -1210,7 +1240,7 @@ class HttpRequest extends Explorable
         }
 
         if (!$this->code) {
-            $mock->headers['X-Kk-Base-Http-Mock-Response'] = '1';
+            $mock->headers['X-Http-Mock-Response'] = '1';
             return [
                 true,
                 $mock
@@ -1223,7 +1253,8 @@ class HttpRequest extends Explorable
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */
         $locale = $container->get('locale');
         $replacers = [
-            'error' => ($this->code + HttpClient::ERROR_CODE_OFFSET) . ':http:' . $code_names[$this->code],
+            'error' => ($this->code + $http_settings->client('error_code_offset'))
+                . ':http:' . $code_names[$this->code],
             'application-title' => $container->get('application-title'),
         ];
         return [
@@ -1238,14 +1269,14 @@ class HttpRequest extends Explorable
                     $locale->text('http-client:error:' . $code_names[$this->code], $replacers)
                     // Deliberately '\n' not "\n".
                     . '\n'
-                    // Cascading: application-id or common or base.
+                    // Regressive: application-id or common or http.
                     . $locale->text(
                         $container->get('application-id') . ':error-suffix_user-report-error',
                         $replacers,
                         $locale->text(
                             'common:error-suffix_user-report-error',
                             $replacers,
-                            $locale->text('base:error-suffix_user-report-error', $replacers)
+                            $locale->text('http:error-suffix_user-report-error', $replacers)
                         )
                     ),
                     $this->code

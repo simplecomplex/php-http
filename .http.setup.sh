@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Stop (don't exit) on error.
 #-------------------------------------------------------------------------------
-### Library: kk-base/http
+### Library: simplecomplex/http
 ### PHP source dir: backend
 ### Angular source dir: frontend
 
@@ -49,10 +49,10 @@ fi
 ### Configuration ######################
 
 ## Symlink base configuration dir.
-ln -s ${path_backend}'/vendor/kk-base/http/config-ini/base' ${path_conf}'/ini/base/http'
+ln -s ${path_backend}'/vendor/simplecomplex/http/config-ini/base' ${path_conf}'/ini/base/http'
 
 ## Symlink override configuration dir.
-ln -s ${path_backend}'/vendor/kk-base/http/config-ini/'${environment}'-override' ${path_conf}'/ini/override/http'
+ln -s ${path_backend}'/vendor/simplecomplex/http/config-ini/'${environment}'-override' ${path_conf}'/ini/override/http'
 
 
 ### Service response validation ########
@@ -85,6 +85,6 @@ unset PHP_LIB_SIMPLECOMPLEX_UTILS_CLI_SILENT
 
 
 ### Success ############################
-echo -e "\n\033[01;32m[success]\033[0m"' KkBase Http setup succeeded.'
+echo -e "\n\033[01;32m[success]\033[0m"' SimpleComplex Http setup succeeded.'
 
 #### END #######################################################################

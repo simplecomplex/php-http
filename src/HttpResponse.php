@@ -1,19 +1,20 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Utils;
 
 /**
  * Http response.
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpResponse
 {
@@ -34,7 +35,7 @@ class HttpResponse
     /**
      * Body to be sent to requestor.
      *
-     * @var \KkBase\Http\HttpResponseBody
+     * @var \SimpleComplex\Http\HttpResponseBody
      */
     public $body;
 

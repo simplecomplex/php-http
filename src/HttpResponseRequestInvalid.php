@@ -1,12 +1,13 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Dependency;
 
@@ -15,7 +16,7 @@ use SimpleComplex\Utils\Dependency;
  *
  * @uses-dependency-container locale, application-title
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
 {
@@ -28,14 +29,18 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
      */
     public function __construct(
         int $code = 0,
-        int $status = HttpService::STATUS_CODE['request-validation'],
+        int $status = 0,
         array $headers = [],
         array $messages = []
     ) {
-        $final_code = $code ? $code : HttpService::ERROR_CODES['request-validation'] + HttpService::ERROR_CODE_OFFSET;
-        $final_status = $status ? $status : HttpService::STATUS_CODE['request-validation'];
+        $container = Dependency::container();
+        /** @var HttpSettings $http_settings */
+        $http_settings = $container->get('http-settings');
+        $final_code = $code ? $code : HttpService::ERROR_CODES['request-validation']
+            + $http_settings->service('error_code_offset');
+        $final_status = $status ? $status : $http_settings->serviceStatusCode('request-validation');
         if ($messages) {
-            $headers['X-Kk-Base-Http-Request-Invalid'] = str_replace(
+            $headers['X-Http-Request-Invalid'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,9 +50,8 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-Kk-Base-Http-Request-Invalid'] = '1';
+            $headers['X-Http-Request-Invalid'] = '1';
         }
-        $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */
         $locale = $container->get('locale');
         $replacers = [
@@ -60,14 +64,14 @@ class HttpResponseRequestInvalid extends HttpResponseRequestUnacceptable
             null,
             $locale->text('http-service:error:request-validation', $replacers)
             . '\n'
-            // Cascading: application-id or common or base.
+            // Regressive: application-id or common or http.
             . $locale->text(
                 $container->get('application-id') . ':error-suffix_user-report-error',
                 $replacers,
                 $locale->text(
                     'common:error-suffix_user-report-error',
                     $replacers,
-                    $locale->text('base:error-suffix_user-report-error', $replacers)
+                    $locale->text('http:error-suffix_user-report-error', $replacers)
                 )
             ),
             $final_code

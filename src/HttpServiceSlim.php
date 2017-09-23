@@ -1,12 +1,13 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use Slim\Container;
 use Slim\App;
@@ -14,8 +15,7 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 
 use SimpleComplex\Utils\Dependency;
-
-use KkBase\Base\Base;
+use SimpleComplex\Utils\Bootstrap;
 
 /**
  * Slim HTTP service (route responder) base class.
@@ -23,10 +23,36 @@ use KkBase\Base\Base;
  * See the bootstrapper.
  * @see HttpServiceSlim::bootstrap()
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
-abstract class HttpServiceSlim extends HttpService
+abstract class HttpServiceSlim
 {
+    /**
+     * Final extending class _must_ override this.
+     *
+     * @var string
+     */
+    const APPLICATION_ID = 'application-id-unknown';
+
+    /**
+     * Dependency injection container ID.
+     *
+     * Final extending class _must_ override this.
+     *
+     * @var string
+     */
+    const DEPENDENCY_ID = 'http-service.unknown';
+
+    /**
+     * @var string
+     */
+    const CLASS_BOOTSTRAP = Bootstrap::class;
+
+    /**
+     * @var string
+     */
+    const CLASS_HTTP_SETTINGS = HttpSettings::class;
+
     /**
      * Final extending class _must_ override this.
      *
@@ -41,6 +67,11 @@ abstract class HttpServiceSlim extends HttpService
     ];
 
     /**
+     * @var string
+     */
+    protected static $crossOriginSiteAllowed;
+
+    /**
      * Declares Slim routes.
      *
      * Has to be static, otherwise redundant instantiation:
@@ -53,7 +84,7 @@ abstract class HttpServiceSlim extends HttpService
      */
     public static function routes($app)
     {
-        $set_cross_origin_options_routes = static::crossOriginSiteAllowed();
+        $cross_origin = !!(static::$crossOriginSiteAllowed = HttpService::crossOriginSiteAllowed());
 
         foreach (static::ROUTES as $route) {
             $method = $route[0];
@@ -61,17 +92,50 @@ abstract class HttpServiceSlim extends HttpService
 
             // Set OPTION routes to respond to cross origin 'pre-flight' OPTION
             // request, which a browser issues if a request sends custom headers.
-            if ($set_cross_origin_options_routes) {
+            if ($cross_origin) {
                 $app->options($route[1], static::DEPENDENCY_ID . ':crossOriginOptions');
             }
         }
     }
 
     /**
+     * Provides application dependencies, now that we know which application
+     * receives the request.
      */
     protected function __construct()
     {
-        parent::__construct();
+        $container = Dependency::container();
+        $application_id = static::APPLICATION_ID;
+        $http_settings = static::CLASS_HTTP_SETTINGS;
+        Dependency::genericSetMultiple(
+            [
+                // Make http class settings available.
+                'http-settings' => function() use ($http_settings) {
+                    return new $http_settings();
+                },
+                // Application specific.
+                'application-id' => $application_id,
+                'application-title' => function() use ($container, $application_id) {
+                    // Use base application title as fallback,
+                    // if the solution's locale text ini file misses
+                    // [some-application-id]
+                    // application-title = Some Solution.
+                    // Non-solution services, will always use base title.
+                    /** @var \SimpleComplex\Locale\AbstractLocale $locale */
+                    $locale = $container->get('locale');
+                    // Cascading: application-id or common or base.
+                    return $locale->text(
+                        $application_id . ':application-title',
+                        [],
+                        $locale->text(
+                            'common:application-title',
+                            [],
+                            $locale->text('http:application-title')
+                        )
+                    );
+                },
+            ]
+        );
     }
 
     /**
@@ -90,7 +154,7 @@ abstract class HttpServiceSlim extends HttpService
      */
     public function cacheControl(Response $response, int $timeToLive = 0) : Response
     {
-        $headers = $this->prepareCacheControlHeaders($timeToLive);
+        $headers = HttpService::cacheControlHeaders($timeToLive);
         foreach ($headers as $key => $val) {
             $response = $response->withHeader($key, $val);
         }
@@ -108,10 +172,12 @@ abstract class HttpServiceSlim extends HttpService
      */
     public function respondForbidden(Response $response) : Response
     {
+        /** @var HttpSettings $http_settings */
+        $http_settings = Dependency::container()->get('http-settings');
         /** @var \Slim\Http\Response $response */
-        $response = $response->withStatus(static::STATUS_CODE['forbidden']);
+        $response = $response->withStatus($http_settings->serviceStatusCode('forbidden'));
         // Copy.
-        $headers = static::RESPONSE_FORBIDDEN;
+        $headers = $http_settings->serviceResponseForbidden();
         if (!empty($headers['body'])) {
             $response->write($headers['body']);
         }
@@ -160,13 +226,13 @@ abstract class HttpServiceSlim extends HttpService
      */
     public static function crossOriginSetHeaders(Response $response) : Response
     {
-        if (($site_allowed = static::$crossOriginSiteAllowed)) {
+        if (static::$crossOriginSiteAllowed) {
             // Allow requestor to see all relevant response headers;
             // headers already set plus Content-Length (which Slim sets
             // before returning response to requestor.
             $response = $response->withHeader(
                 'Access-Control-Allow-Origin',
-                $site_allowed
+                static::$crossOriginSiteAllowed
             )->withHeader(
                 'Access-Control-Expose-Headers',
                 join(',', array_keys($response->getHeaders())) . ',Content-Length'
@@ -224,11 +290,12 @@ abstract class HttpServiceSlim extends HttpService
     ) : Response {
         if (static::$crossOriginSiteAllowed) {
             // Set Access-Control-Allow-Origin, Access-Control-Expose-Headers.
-            $response = HttpServiceSlim::crossOriginSetHeaders($response);
+            $response = static::crossOriginSetHeaders($response);
             // If the request contains custom headers, they will be listed
             // in request Access-Control-Request-Headers.
             if ($request->hasHeader('Access-Control-Request-Headers')) {
                 // All HTTP methods supported by our HTTP client.
+                /** @var Response $response */
                 $response = $response->withHeader(
                     'Access-Control-Allow-Methods',
                     join(', ', HttpClient::methodsSupported())
@@ -238,9 +305,10 @@ abstract class HttpServiceSlim extends HttpService
                     // and apparantly also understands response
                     // Access-Control-Allow-Headers lowercased.
                     join(', ', $request->getHeader('Access-Control-Request-Headers'))
-                )->withHeader(
+                );
+                $response = $response->withHeader(
                     'Access-Control-Max-Age',
-                    '' . HttpClient::CACHEABLE_TIME_TO_LIVE
+                    '' . Dependency::container()->get('http-settings')->client('cacheable_time_to_live')
                 );
             }
         }
@@ -248,7 +316,7 @@ abstract class HttpServiceSlim extends HttpService
     }
 
     /**
-     * Bootstraps Slim, and the kk-seb|simplecomplex framework for all services.
+     * Bootstraps Slim, and the simplecomplex framework for all services.
      *
      * @param Callable|null $customLogger
      *      Custom logger; default is JsonLog.
@@ -264,18 +332,15 @@ abstract class HttpServiceSlim extends HttpService
 
         // Pass Slim container to SimpleComplex Dependency container.
         // The Slim container itself is still usable directly.
-        // KkBase and SimpleComplex classes use the container via Dependency,
+        // SimpleComplex classes use the container via Dependency,
         // to avoid dependency of a particular PSR Container (like Slim's).
-        // And set prepare base dependencies.
+
+        // And prepare base dependencies.
         /**
-         * @var \KkBase\Base\Cache\CacheBroker 'cache-broker'
-         * @var \KkBase\Base\Config\IniSectionedConfig 'config'
-         * @var \KkBase\Base\JsonLog\JsonLog 'logger' (or one passed by argument)
-         * @var \SimpleComplex\Inspect\Inspect 'inspect'
-         * @var \SimpleComplex\Locale\AbstractLocale 'locale'
-         * @var \KkBase\Base\Validate\Validate 'validate'
+         * @see \SimpleComplex\Utils\Bootstrap::prepareDependencies()
          */
-        Base::prepareBaseDependencies($container, $customLogger);
+        $bootstrap = static::CLASS_BOOTSTRAP . '::prepareDependencies';
+        $bootstrap($container, $customLogger);
 
         // Fallback exception handler.
         set_exception_handler(function(\Throwable $throwable) use ($container) {
@@ -410,11 +475,11 @@ abstract class HttpServiceSlim extends HttpService
                 }
                 try {
                     // Even error response may need Cross Origin headers.
-                    if (HttpServiceSlim::crossOriginSiteAllowed()) {
+                    if (static::$crossOriginSiteAllowed) {
                         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                            $response = HttpServiceSlim::crossOriginOptionsSetHeaders($request, $response);
+                            $response = static::crossOriginOptionsSetHeaders($request, $response);
                         } else {
-                            $response = HttpServiceSlim::crossOriginSetHeaders($response);
+                            $response = static::crossOriginSetHeaders($response);
                         }
                     }
                 } catch (\Throwable $ignore) {
@@ -422,7 +487,7 @@ abstract class HttpServiceSlim extends HttpService
                 /**
                  * Send status 200, pass real success+status in response body.
                  *
-                 * @see \KkBase\Http\HttpResponseBody
+                 * @see \SimpleComplex\Http\HttpResponseBody
                  */
                 $response->write(
                     json_encode([
@@ -473,11 +538,11 @@ abstract class HttpServiceSlim extends HttpService
                 }
                 try {
                     // Even error response may need Cross Origin headers.
-                    if (HttpServiceSlim::crossOriginSiteAllowed()) {
+                    if (static::$crossOriginSiteAllowed) {
                         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-                            $response = HttpServiceSlim::crossOriginOptionsSetHeaders($request, $response);
+                            $response = static::crossOriginOptionsSetHeaders($request, $response);
                         } else {
-                            $response = HttpServiceSlim::crossOriginSetHeaders($response);
+                            $response = static::crossOriginSetHeaders($response);
                         }
                     }
                 } catch (\Throwable $ignore) {
@@ -485,7 +550,7 @@ abstract class HttpServiceSlim extends HttpService
                 /**
                  * Send status 200, pass real success+status in response body.
                  *
-                 * @see \KkBase\Http\HttpResponseBody
+                 * @see \SimpleComplex\Http\HttpResponseBody
                  */
                 $response->write(
                     json_encode([

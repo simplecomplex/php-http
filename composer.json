@@ -1,26 +1,31 @@
 {
-    "name": "kk-base/http",
+    "name": "simplecomplex/http",
     "type": "library",
-    "description": "AJAX (primarily Angular-oriented) service and REST (primarily KKI) client utilities.",
-    "homepage": "https://kkgit.kk.dk/php-psr.kk-base/http",
+    "description": "High-level HTTP client and (Slim) service utility. Client provides response validation and mocking; service provides standardized and predictable responses.",
+    "keywords": ["HTTP client", "HTTP service", "HTTP response mock", "HTTP response validate", "PHP"],
+    "homepage": "https://github.com/simplecomplex/php-http",
     "authors": [
         {
             "name": "Jacob Friis Mathiasen",
-            "email": "jacob.friis.mathiasen@ks.kk.dk"
+            "email": "jacob.friis@simplecomplex.net"
         }
     ],
     "require": {
-        "simplecomplex/inspect": "^2.0 || dev-develop",
-        "simplecomplex/restmini": "^1.0 || dev-develop",
+        "psr/log": "^1.0",
         "simplecomplex/utils": "^1.0 || dev-develop",
-        "kk-base/base": "^1.0 || dev-develop"
+        "simplecomplex/cache": "^1.0 || dev-develop",
+        "simplecomplex/config": "^1.0 || dev-develop",
+        "simplecomplex/locale": "^1.0 || dev-develop",
+        "simplecomplex/validate": "^1.0 || dev-develop",
+        "simplecomplex/restmini": "^1.0 || dev-develop",
+        "simplecomplex/inspect": "^2.0 || dev-develop"
     },
     "suggest": {
         "slim/slim": "^3.8.1"
     },
     "autoload": {
         "psr-4": {
-            "KkBase\\Http\\": "src/"
+            "SimpleComplex\\Http\\": "src/"
         }
     }
 }

@@ -1,75 +1,73 @@
-KkBase/Http 1.x, 2017-09-22
----------------------------
+SimpleComplex/Http 1.x, 2017-09-23
+----------------------------------
+- Facilitate extending major classes; moved overridable class constants
+  to HttpSettings class, and HttpServiceSlim no longer extends HttpService.
+
+SimpleComplex/Http 1.x, 2017-09-22
+----------------------------------
 - Config and locale-text no longer risk that dupe key scalar values become array
   Removed warnings from documentation.
 
-KkBase/Http 1.x, 2017-09-20
----------------------------
-- Package moved from 'seb' to 'base'; git group (was php-psr.kk-seb)
-  and namespace (was kk-seb, KkSeb).
-- All custom headers renamed to X-Kk-Base-Http; from X-Kk-Seb-Http.
-
-KkSeb/Http 1.x, 2017-09-19
---------------------------
+SimpleComplex/Http 1.x, 2017-09-19
+----------------------------------
 - HttpServiceSlim set PHP warning/notice error handler.
   And fix that origin exception wasn't logged in an exception/error handler
   itself raised an exception.
 - HttpForwardableResponseException bugs.
 
-KkSeb/Http 1.x, 2017-09-18
---------------------------
+SimpleComplex/Http 1.x, 2017-09-18
+----------------------------------
 - Frontend service error message headers.
 - HttpForwardableResponseException to handle service error that happen deep
   within the framework.
 
-KkSeb/Http 1.x, 2017-09-17
---------------------------
+SimpleComplex/Http 1.x, 2017-09-17
+----------------------------------
 - Cache control response headers.
 
-KkSeb/Http 1.x, 2017-09-16
---------------------------
+SimpleComplex/Http 1.x, 2017-09-16
+----------------------------------
 - Use standard method to send 403 Forbidden response, except when cause is real
   unauthorized.
 
-KkSeb/Http 1.x, 2017-09-14
---------------------------
+SimpleComplex/Http 1.x, 2017-09-14
+----------------------------------
 - HttpService/HttpServiceSlim obsolete constructor param config removed.
 
-KkSeb/Http 1.x, 2017-09-10
---------------------------
-- All 'Kk-Seb-' headers renamed; from 'KkSeb-'.
+SimpleComplex/Http 1.x, 2017-09-10
+----------------------------------
 - .cross_origin_allow_sites file renamed; from .access_control_allow_origin.
 - Cross origin Access-Control-Allow-Origin header must only be returned when
   when such site requests, and only contain it's _own_ protocol, host and port;
   and port only if request header Origin contains port.
 
-KkSeb/Http 1.x, 2017-09-03
---------------------------
+SimpleComplex/Http 1.x, 2017-09-03
+----------------------------------
 - Slim initialization generalized and moved to HttpServiceSlim.
 - HttpServiceSlim is now the overall bootstrapper,
-  of Slim and the kk-seb|simplecomplex framework.
+  of Slim and the simplecomplex framework.
 
-KkSeb/Http 1.x, 2017-09-02
---------------------------
+SimpleComplex/Http 1.x, 2017-09-02
+----------------------------------
 - Mock and validation rule set caches allow long keys; length 128.
 
-KkSeb/Http 1.x, 2017-08-31
---------------------------
+SimpleComplex/Http 1.x, 2017-08-31
+----------------------------------
 - Response mocking turned off globally in production.
 
-KkSeb/Http 1.x, 2017-08-29
---------------------------
+SimpleComplex/Http 1.x, 2017-08-29
+----------------------------------
 - HttpClient option log_warning_on_status, primarily to prevent log flood
   of 504 Bad Gateway events.
 - Constants that right belong to HttpClient moved from HttpRequest.
 
-KkSeb/Http 1.x, 2017-08-28
---------------------------
+SimpleComplex/Http 1.x, 2017-08-28
+----------------------------------
 - Cross origin pre-request OPTIONS request support; to allow/support
   custom request headers.
 
-KkSeb/Http 1.x, 2017-08-23
---------------------------
+SimpleComplex/Http 1.x, 2017-08-23
+----------------------------------
 - Application title is now retrieved from dependency injection container;
   no longer a HttpClient constructor parameter.
 - Cross Origin allowed sites are now set in file
@@ -78,33 +76,33 @@ KkSeb/Http 1.x, 2017-08-23
   to access that list.
 - Bash setup script support 'environment' argument, dev|prod.
 
-KkSeb/Http 1.x, 2017-08-22
---------------------------
+SimpleComplex/Http 1.x, 2017-08-22
+----------------------------------
 - Log response body on response validation failure; separate warning log event.
 - Do discern between service (as AJAX request receiver) and client (as remote
   service requestor).
 - Prefab HttpResponseRequestInvalid to send when frontend request arguments
   fail _request_ validation.
 
-KkSeb/Http 1.x, 2017-08-20
---------------------------
+SimpleComplex/Http 1.x, 2017-08-20
+----------------------------------
 - Response validation fully implemented.
 - Response mocking fully implemented.
 - HttpClient instance can't have state related to endpoint, method or request;
   would cripple reusability.
 - HttpClient::getInstance() for reusability across scopes.
 
-KkSeb/Http 1.x, 2017-08-19
---------------------------
+SimpleComplex/Http 1.x, 2017-08-19
+----------------------------------
 - mock_response option.
 
-KkSeb/Http 1.x, 2017-08-18
---------------------------
+SimpleComplex/Http 1.x, 2017-08-18
+----------------------------------
 - Set remote response headers on HttpResponse instead of on HttpRequest.
 - Set 'validated' on HttpResponse instead of on HttpRequest.
 - Cacheable response must be saved to cache on access/retrieval;
   as late as possible.
-- Set iso-8601 date header X-KkSeb-Http-Cache-Time on response when caching.
+- Set iso-8601 date header X-Http-Cache-Time on response when caching.
 - - - -
 - Validation has to be executed privately; otherwise double response
   access/retrieval (before and after validation) could result in bad
@@ -114,17 +112,17 @@ KkSeb/Http 1.x, 2017-08-18
 - Setting/option validate_response is the way to command validation.
 - Implemented require_response_headers check.
 
-KkSeb/Http 1.x, 2017-08-17
---------------------------
+SimpleComplex/Http 1.x, 2017-08-17
+----------------------------------
 - Dot-separated operation name; provider.service.endpoint.METHODorAlias.
 - Service ini config names dot-separated.
-- HttpRequest set response headers X-KkSeb-Http-Original-Status
-  and X-KkSeb-Http-Final-Status.
+- HttpRequest set response headers X-Http-Original-Status
+  and X-Http-Final-Status.
   The 'final' status will always be set; the 'original' status may not be set
   if the request failed without contact with remote service.
 
-KkSeb/Http 1.x, 2017-08-16
---------------------------
+SimpleComplex/Http 1.x, 2017-08-16
+----------------------------------
 - HttpClient support HTTP method aliases index|retrieve (GET),
   create (POST), update (PUT), delete (DELETE).
 - Args provider, service and endpoint must be lisp cased; underscore could break
@@ -140,33 +138,33 @@ KkSeb/Http 1.x, 2017-08-16
   to running any body data validation.
 - Validation now supports variants; multiple validation rule sets.
 
-KkSeb/Http 1.x, 2017-08-12
---------------------------
+SimpleComplex/Http 1.x, 2017-08-12
+----------------------------------
 - Slim service helper HttpServiceSlim.
 - This library, Http, must deliver Access-Control-Allow-Origin config setting.
 
-KkSeb/Http 1.x, 2017-08-11
---------------------------
+SimpleComplex/Http 1.x, 2017-08-11
+----------------------------------
 - HttpClient/HttpRequest error handling complete.
 - HttpClient::request() support numerically indexed path, query, body arguments.
 - HttpClient::request() return HttpRequest; not HttpResponse.
 - 'cacheable' is only allowed on 'method' config level and/or as option.
 - Works, at least against a 'host_not_found' host.
 
-KkSeb/Http 1.x, 2017-08-10
---------------------------
+SimpleComplex/Http 1.x, 2017-08-10
+----------------------------------
 - HttpRequest must evaluate HttpResponse; not HttpResponse itself.
   When (later) implementing a validate feature, that must be able to validate
   the whole response (including status and headers); not body data only.
 
-KkSeb/Http 1.x, 2017-08-09
---------------------------
+SimpleComplex/Http 1.x, 2017-08-09
+----------------------------------
 - New option retry_on_unavailable; 503 Service Unavailable or host not found.
 
-KkSeb/Http 1.x, 2017-08-08
---------------------------
+SimpleComplex/Http 1.x, 2017-08-08
+----------------------------------
 - Client, response and response body done. Request error handling missing.
 
-KkSeb/Http 1.x, 2017-08-04
---------------------------
+SimpleComplex/Http 1.x, 2017-08-04
+----------------------------------
 - Initial.

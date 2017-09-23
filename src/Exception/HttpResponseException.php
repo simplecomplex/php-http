@@ -1,11 +1,11 @@
 <?php
 
-namespace KkBase\Http\Exception;
+namespace SimpleComplex\Http\Exception;
 
 /**
  * To detect response exception created by this library.
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpResponseException extends HttpRuntimeException
 {

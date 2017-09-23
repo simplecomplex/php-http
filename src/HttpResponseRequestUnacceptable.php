@@ -1,12 +1,13 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Dependency;
 
@@ -15,7 +16,7 @@ use SimpleComplex\Utils\Dependency;
  *
  * @uses-dependency-container locale, application-title
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpResponseRequestUnacceptable extends HttpResponse
 {
@@ -27,15 +28,19 @@ class HttpResponseRequestUnacceptable extends HttpResponse
      */
     public function __construct(
         int $code = 0,
-        int $status = HttpService::STATUS_CODE['request-unacceptable'],
+        int $status = 0,
         array $headers = [],
         $body = null
     ) {
-        $final_code = $code ? $code : HttpService::ERROR_CODES['request-unacceptable'] + HttpService::ERROR_CODE_OFFSET;
-        $final_status = $status ? $status : HttpService::STATUS_CODE['request-unacceptable'];
+        $container = Dependency::container();
+        /** @var HttpSettings $http_settings */
+        $http_settings = $container->get('http-settings');
+        $final_code = $code ? $code : HttpService::ERROR_CODES['request-unacceptable']
+            + $http_settings->service('error_code_offset');
+        $final_status = $status ? $status : $http_settings->serviceStatusCode('request-unacceptable');
 
         if (!$headers) {
-            $headers['X-Kk-Base-Http-Request-Unacceptable'] = '1';
+            $headers['X-Http-Request-Unacceptable'] = '1';
         }
 
         if (!($final_body = $body)) {
@@ -52,14 +57,14 @@ class HttpResponseRequestUnacceptable extends HttpResponse
                 null,
                 $locale->text('http-service:error:reject', $replacers)
                 . '\n'
-                // Cascading: application-id or common or base.
+                // Regressive: application-id or common or http.
                 . $locale->text(
                     $container->get('application-id') . ':error-suffix_user-report-error',
                     $replacers,
                     $locale->text(
                         'common:error-suffix_user-report-error',
                         $replacers,
-                        $locale->text('base:error-suffix_user-report-error', $replacers)
+                        $locale->text('http:error-suffix_user-report-error', $replacers)
                     )
                 ),
                 $final_code

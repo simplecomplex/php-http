@@ -1,83 +1,33 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Utils;
-use SimpleComplex\Utils\Dependency;
 
 /**
- * Base class of all HTTP services, based on Slim
+ * Utility class for all HTTP services, based on Slim
  * or other service exposure framework.
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
-abstract class HttpService
+class HttpService
 {
     /**
-     * Final extending class _must_ override this.
+     * Final numeric values are be affected
+     * by HttpSettings::SERVICE['error_code_offset'].
      *
-     * @var string
-     */
-    const APPLICATION_ID = 'application-id-unknown';
-
-    /**
-     * Dependency injection container ID.
+     * Overriding this constant has _no_ effect;
+     * http classes call HttpService class constants directly.
      *
-     * Final extending class _must_ override this.
+     * @see HttpSettings::SERVICE
      *
-     * @var string
-     */
-    const DEPENDENCY_ID = 'http-service.unknown';
-
-    /**
-     * Provides application dependencies.
-     */
-    protected function __construct()
-    {
-        // Provide application dependencies, now that we know which application
-        // receives the request.
-        $container = Dependency::container();
-        $application_id = static::APPLICATION_ID;
-        Dependency::genericSetMultiple(
-            [
-                'application-id' => $application_id,
-                'application-title' => function () use ($container, $application_id) {
-                    // Use base application title as fallback,
-                    // if the solution's locale text ini file misses
-                    // [some-application-id]
-                    // application-title = Some Solution.
-                    // Non-solution services, will always use base title.
-                    /** @var \SimpleComplex\Locale\AbstractLocale $locale */
-                    $locale = $container->get('locale');
-                    // Cascading: application-id or common or base.
-                    return $locale->text(
-                        $application_id . ':application-title',
-                        [],
-                        $locale->text(
-                            'common:application-title',
-                            [],
-                            $locale->text('base:application-title')
-                        )
-                    );
-                }
-            ]
-        );
-    }
-
-    /**
-     * Range is this +99.
-     *
-     * @var int
-     */
-    const ERROR_CODE_OFFSET = 1000;
-
-    /**
      * @var int[]
      */
     const ERROR_CODES = [
@@ -96,37 +46,6 @@ abstract class HttpService
     ];
 
     /**
-     * @var int[]
-     */
-    const STATUS_CODE = [
-        // 400 Bad Request.
-        'request-unacceptable' => 400,
-        // 401 Unauthorized.
-        'unauthenticated' => 401,
-        // 403 Forbidden.
-        'forbidden' => 403,
-        'unauthorized' => 403,
-        // Recommended values:
-        // 400 Bad Request
-        // 412 Precondition Failed
-        // 422 Unprocessable Entity; WebDAV, but gaining support because exact.
-        'request-validation' => 400,
-    ];
-
-    /**
-     * Make all but unauthorized 'forbidden' responses look the same.
-     *
-     * List of headers, except the 'body' bucket.
-     *
-     * @var string[]
-     */
-    const RESPONSE_FORBIDDEN = [
-        'Connection' => 'close',
-        'Content-Type' => 'text/plain',
-        'body' => 'Go away.'
-    ];
-
-    /**
      * Prepare cache control response headers.
      *
      * @param int $timeToLive
@@ -137,7 +56,7 @@ abstract class HttpService
      * @throws \InvalidArgumentException
      *      Arg timeTolive is negative.
      */
-    protected function prepareCacheControlHeaders(int $timeToLive = 0) : array
+    public static function cacheControlHeaders(int $timeToLive = 0) : array
     {
         if ($timeToLive < 0) {
             throw new \InvalidArgumentException('Arg timeTolive[' . $timeToLive . '] is not non-negative integer.');

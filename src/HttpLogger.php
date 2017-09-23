@@ -1,16 +1,17 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
-use KkBase\Http\Exception\HttpResponseValidationException;
+use SimpleComplex\Http\Exception\HttpResponseValidationException;
 
 /**
  * Non a PSR logger, but uses such.
@@ -19,7 +20,7 @@ use KkBase\Http\Exception\HttpResponseValidationException;
  *
  * @internal
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpLogger
 {

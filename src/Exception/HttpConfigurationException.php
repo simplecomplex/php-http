@@ -1,11 +1,11 @@
 <?php
 
-namespace KkBase\Http\Exception;
+namespace SimpleComplex\Http\Exception;
 
 /**
  * To detect configuration exception created by this library.
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpConfigurationException extends HttpLogicException
 {

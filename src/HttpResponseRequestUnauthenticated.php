@@ -1,12 +1,13 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Dependency;
 
@@ -15,7 +16,7 @@ use SimpleComplex\Utils\Dependency;
  *
  * @uses-dependency-container locale, application-title
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
 {
@@ -28,14 +29,18 @@ class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
      */
     public function __construct(
         int $code = 0,
-        int $status = HttpService::STATUS_CODE['unauthenticated'],
+        int $status = 0,
         array $headers = [],
         array $messages = []
     ) {
-        $final_code = $code ? $code : HttpService::ERROR_CODES['unauthenticated'] + HttpService::ERROR_CODE_OFFSET;
-        $final_status = $status ? $status : HttpService::STATUS_CODE['unauthenticated'];
+        $container = Dependency::container();
+        /** @var HttpSettings $http_settings */
+        $http_settings = $container->get('http-settings');
+        $final_code = $code ? $code : HttpService::ERROR_CODES['unauthenticated']
+            + $http_settings->service('error_code_offset');
+        $final_status = $status ? $status : $http_settings->serviceStatusCode('unauthenticated');
         if ($messages) {
-            $headers['X-Kk-Base-Http-Request-Unauthenticated'] = str_replace(
+            $headers['X-Http-Request-Unauthenticated'] = str_replace(
                 [
                     ':',
                     '[',
@@ -45,7 +50,7 @@ class HttpResponseRequestUnauthenticated extends HttpResponseRequestUnacceptable
                 join(' ', $messages)
             );
         } else {
-            $headers['X-Kk-Base-Http-Request-Unauthenticated'] = '1';
+            $headers['X-Http-Request-Unauthenticated'] = '1';
         }
         $container = Dependency::container();
         /** @var \SimpleComplex\Locale\AbstractLocale $locale */

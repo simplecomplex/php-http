@@ -1,18 +1,19 @@
 <?php
 /**
- * KIT/Koncernservice, Københavns Kommune.
- * @link https://kkgit.kk.dk/php-psr.kk-base/http
- * @author Jacob Friis Mathiasen <jacob.friis.mathiasen@ks.kk.dk>
+ * SimpleComplex PHP Http
+ * @link      https://github.com/simplecomplex/php-http
+ * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
 
-namespace KkBase\Http;
+namespace SimpleComplex\Http;
 
 use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\RestMini\Client as RestMiniClient;
-use KkBase\Http\Exception\HttpConfigurationException;
+use SimpleComplex\Http\Exception\HttpConfigurationException;
 
 /**
  * Methods of HttpClient and HttpRequest throw no exceptions.
@@ -21,9 +22,9 @@ use KkBase\Http\Exception\HttpConfigurationException;
  * And use that HttpResponseBody's 'message' as safe and user-friendly error
  * message to user.
  *
- * @see \KkBase\Http\HttpResponse::status
- * @see \KkBase\Http\HttpResponseBody::success
- * @see \KkBase\Http\HttpResponseBody::message
+ * @see \SimpleComplex\Http\HttpResponse::status
+ * @see \SimpleComplex\Http\HttpResponseBody::success
+ * @see \SimpleComplex\Http\HttpResponseBody::message
  *
  * @uses-dependency-container config
  *
@@ -31,7 +32,7 @@ use KkBase\Http\Exception\HttpConfigurationException;
  * @property-read string $service
  * @property-read \Throwable|null $initError
  *
- * @package KkBase\Http
+ * @package SimpleComplex\Http
  */
 class HttpClient extends Explorable
 {
@@ -126,18 +127,6 @@ class HttpClient extends Explorable
     // Business.----------------------------------------------------------------
 
     /**
-     * @var string
-     */
-    const LOG_TYPE = 'http-client';
-
-    /**
-     * Default cacheable time-to-live.
-     *
-     * @var int
-     */
-    const CACHEABLE_TIME_TO_LIVE = 3600;
-
-    /**
      * Settings/options required, and their (scalar) types.
      *
      * If type is string then value can't be empty string.
@@ -164,9 +153,7 @@ class HttpClient extends Explorable
      * - (int) ttl: time-to-live, default CACHEABLE_TIME_TO_LIVE
      * - refresh: retrieve new response and cache it, default not
      * - anybody: for any user, default current user only
-     * NB: cache is not per page/form, like Drupal
-     * kk_seb_service_client.
-     * Would require that requestor sent a X-Kk-Base-Page-Load-Id
+     * Would require that requestor sent a X-Http-Page-Load-Id
      * header, based on an (backend cached) ID originally issued
      * by a local service; called by Angular root app ngOnit().
      *
@@ -210,17 +197,14 @@ class HttpClient extends Explorable
     ];
 
     /**
-     * Range is this +99.
+     * Final numeric values are be affected
+     * by HttpSettings::CLIENT['error_code_offset'].
      *
-     * @var int
-     */
-    const ERROR_CODE_OFFSET = 1900;
-
-    /**
-     * Actual numeric values may be affected by non-zero ERROR_CODE_OFFSET
-     * of classes extending Client.
+     * Overriding this constant has _no_ effect;
+     * http classes call HttpClient class constants directly.
      *
-     * @see Client::ERROR_CODE_OFFSET
+     * @see HttpSettings::CLIENT
+     * @see \SimpleComplex\RestMini\Client::ERROR_CODE_OFFSET
      *
      * @var array
      */
@@ -292,7 +276,7 @@ class HttpClient extends Explorable
     protected $settings = [];
 
     /**
-     * @var \KkBase\Base\Config\IniSectionedConfig
+     * @var \SimpleComplex\Config\IniSectionedConfig
      */
     protected $config;
 
@@ -336,10 +320,12 @@ class HttpClient extends Explorable
      */
     public function __construct(string $provider, string $service)
     {
+        $container = Dependency::container();
+
         if (strpos($provider, '.') !== false) {
             throw new \InvalidArgumentException(
                 'Arg provider name is invalid.',
-                static::ERROR_CODES['local-use'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-use'] + $container->get('http-settings')->client('error_code_offset')
             );
         }
         $this->provider = $provider;
@@ -347,41 +333,44 @@ class HttpClient extends Explorable
         if (strpos($service, '.') !== false) {
             throw new \InvalidArgumentException(
                 'Arg service name is invalid.',
-                static::ERROR_CODES['local-use'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-use'] + $container->get('http-settings')->client('error_code_offset')
             );
         }
         $this->service = $service;
 
-        $container = Dependency::container();
-        /** @var \KkBase\Base\Config\IniSectionedConfig $config */
+        /** @var \SimpleComplex\Config\IniSectionedConfig $config */
         $this->config = $container->get('config');
 
-        // Config section: http-provider_kki.
+        // Config section: http-provider.prvdr.
         if (!($conf_provider = $this->config->get('http-provider.' . $provider, '*'))) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg provider[' . $provider . '] global config section['
                 . 'http-provider.' . $provider . '] is not configured.',
-                static::ERROR_CODES['local-configuration'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-configuration']
+                + $container->get('http-settings')->client('error_code_offset')
             );
         } elseif (!empty($conf_provider['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_provider['cacheable']) . '] is only allowed on method level (or as option).',
-                static::ERROR_CODES['local-configuration'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-configuration']
+                + $container->get('http-settings')->client('error_code_offset')
             );
         }
-        // Config section: http-service_kki_seb-personale.
+        // Config section: http-service.prvdr.example-service.
         elseif (!($conf_service = $this->config->get('http-service.' . $provider . '.' . $service, '*'))) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, constructor arg service[' . $provider . '] global config section['
                 . 'http-service.' . $provider . '.' . $service . '] is not configured.',
-                static::ERROR_CODES['local-configuration'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-configuration']
+                + $container->get('http-settings')->client('error_code_offset')
             );
         } elseif (!empty($conf_service['cacheable'])) {
             $this->initError = new HttpConfigurationException(
                 'HttpClient abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_service['cacheable']) . '] is only allowed on method level (or as option).',
-                static::ERROR_CODES['local-configuration'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-configuration']
+                + $container->get('http-settings')->client('error_code_offset')
             );
         } else {
             // A-OK, so far.
@@ -406,7 +395,7 @@ class HttpClient extends Explorable
      *      Numerically indexed is also supported.
      * @param array $options
      *
-     * @return \KkBase\Http\HttpRequest
+     * @return \SimpleComplex\Http\HttpRequest
      *
      * @uses HttpConfigurationException
      *      Un-configured endpoint or method.
@@ -422,16 +411,20 @@ class HttpClient extends Explorable
      */
     public function request(string $endpoint, string $methodOrAlias, array $arguments, array $options = []) : HttpRequest
     {
+        $container = Dependency::container();
+        /** @var HttpSettings $http_settings */
+        $http_settings = $container->get('http-settings');
+
         if (strpos($endpoint, '.') !== false) {
             throw new \InvalidArgumentException(
                 'Arg endpoint name is invalid.',
-                static::ERROR_CODES['local-use'] + static::ERROR_CODE_OFFSET
+                static::ERROR_CODES['local-use'] + $http_settings->client('error_code_offset')
             );
         }
 
         $operation = $this->provider . '.' . $this->service . '.' . $endpoint . '.' . $methodOrAlias;
 
-        $this->httpLogger = new HttpLogger(static::LOG_TYPE, $operation);
+        $this->httpLogger = new HttpLogger($http_settings->client('log_type'), $operation);
         $properties = [
             'method' => $methodOrAlias,
             'operation' => $operation,
@@ -441,7 +434,9 @@ class HttpClient extends Explorable
         // Erred in constructor.
         if ($this->initError) {
             $this->httpLogger->log(LOG_ERR, 'Http init', $this->initError);
-            return new HttpRequest($properties, [], [], $this->initError->getCode() - static::ERROR_CODE_OFFSET);
+            return new HttpRequest(
+                $properties, [], [], $this->initError->getCode() - $http_settings->client('error_code_offset')
+            );
         }
 
         // Support HTTP method aliases.
@@ -466,13 +461,13 @@ class HttpClient extends Explorable
                     $this->httpLogger->log(LOG_ERR, 'Http init', new \InvalidArgumentException(
                         'Client abort, request() arg method[' . $methodOrAlias . '] is not among supported methods '
                         . join('|', RestMiniClient::METHODS_SUPPORTED) . '.',
-                        $code + static::ERROR_CODE_OFFSET
+                        $code + $http_settings->client('error_code_offset')
                     ));
                     return new HttpRequest($properties, [], [], $code);
                 }
         }
 
-        // Config section: http-service_kki_seb-personale_cpr.
+        // Config section: http-endpoint.prvdr.example-service.ndpnt.
         if (!($conf_endpoint = $this->config->get(
             'http-endpoint.' . $this->provider . '.' . $this->service . '.' . $endpoint, '*')
         )) {
@@ -480,7 +475,7 @@ class HttpClient extends Explorable
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-endpoint.' . $this->provider . '.' . $this->service . '.' . $endpoint . '] is not configured.',
-                $code + static::ERROR_CODE_OFFSET
+                $code + $http_settings->client('error_code_offset')
             ));
             return new HttpRequest($properties, [], [], $code);
         } elseif (!empty($conf_endpoint['cacheable'])) {
@@ -489,17 +484,17 @@ class HttpClient extends Explorable
                 'Client abort, truthy config setting \'cacheable\' type['
                 . Utils::getType($conf_endpoint['cacheable']) . '] is only allowed on method level (or as option).',
                 static::ERROR_CODES['local-configuration'],
-                $code + static::ERROR_CODE_OFFSET
+                $code + $http_settings->client('error_code_offset')
             ));
         }
-        // Config section: http-service_kki_seb-personale_cpr_GET.
+        // Config section: http-method.prvdr.example-service.ndpnt.GET.
         // Method configuration is allowed to empty array.
         if (($conf_method = $this->config->get('http-method.' . $operation, '*')) === null) {
             $code = static::ERROR_CODES['local-configuration'];
             $this->httpLogger->log(LOG_ERR, 'Http init', new HttpConfigurationException(
                 'Client abort, request() arg endpoint[' . $endpoint . '] global config section['
                 . 'http-method.' . $operation . '] is not configured.',
-                $code + static::ERROR_CODE_OFFSET
+                $code + $http_settings->client('error_code_offset')
             ));
             return new HttpRequest($properties, [], [], $code);
         }
@@ -547,7 +542,7 @@ class HttpClient extends Explorable
                     'Client abort, request() arg arguments keys[' . join(', ', $keys)
                     . '] don\'t match valid numerically indexed keys or associative keys[path, query, body],'
                     . ' perhaps forgot to nest arguments.',
-                    $code + static::ERROR_CODE_OFFSET
+                    $code + $http_settings->client('error_code_offset')
                 ));
                 return new HttpRequest($properties, [], [], $code);
             }
@@ -584,7 +579,7 @@ class HttpClient extends Explorable
                     'Http init',
                     new HttpConfigurationException(
                         'Client abort, settings+options \'' . $name . '\' ' . $msg . '.',
-                        $code + static::ERROR_CODE_OFFSET
+                        $code + $http_settings->client('error_code_offset')
                     ),
                     [
                         'settings+options' => $options,
@@ -606,46 +601,5 @@ class HttpClient extends Explorable
     public static function methodsSupported() : array
     {
         return RestMiniClient::METHODS_SUPPORTED;
-    }
-
-    /**
-     * Get error code by name, or code list, or code range.
-     *
-     * @param string $name
-     *      Non-empty: return code by name (defaults to 'unknown')
-     *      Default: empty (~ return codes list).
-     * @param bool $range
-     *      true: return code range [(N-first, N-last].
-     *      Default: false (~ ignore argument).
-     *
-     * @return int|array
-     */
-    public static function errorCode($name = '', $range = false)
-    {
-        static $codes;
-        if ($name) {
-            return static::ERROR_CODE_OFFSET
-                + (array_key_exists($name, static::ERROR_CODES) ? static::ERROR_CODES[$name] :
-                    static::ERROR_CODES['unknown']
-                );
-        }
-        if ($range) {
-            return [
-                static::ERROR_CODE_OFFSET,
-                static::ERROR_CODE_OFFSET + 999
-            ];
-        }
-        if (!$codes) {
-            // Copy.
-            $codes = static::ERROR_CODES;
-            if (($offset = static::ERROR_CODE_OFFSET)) {
-                foreach ($codes as &$code) {
-                    $code += $offset;
-                }
-                // Iteration ref.
-                unset($code);
-            }
-        }
-        return $codes;
     }
 }
