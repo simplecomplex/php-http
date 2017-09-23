@@ -24,7 +24,7 @@ use SimpleComplex\Http\Exception\HttpResponseValidationException;
 /**
  * HTTP request, to be issued by HttpClient.
  *
- * @uses-dependency-container cache-broker, locale, validate, application-title
+ * @uses-dependency-container cache-broker, locale, validate, application-title, http-settings
  *
  * @cache-store http-response
  * @cache-store http-response_validation-rule-set

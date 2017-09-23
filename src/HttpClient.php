@@ -16,6 +16,8 @@ use SimpleComplex\RestMini\Client as RestMiniClient;
 use SimpleComplex\Http\Exception\HttpConfigurationException;
 
 /**
+ * High-level HTTP client providing response validation and mocking.
+ *
  * Methods of HttpClient and HttpRequest throw no exceptions.
  * Instead use the 'success' attribute of request()'s returned HttpResponse's
  * HttpResponseBody.
@@ -26,7 +28,7 @@ use SimpleComplex\Http\Exception\HttpConfigurationException;
  * @see \SimpleComplex\Http\HttpResponseBody::success
  * @see \SimpleComplex\Http\HttpResponseBody::message
  *
- * @uses-dependency-container config
+ * @uses-dependency-container config, http-settings
  *
  * @property-read string $provider
  * @property-read string $service

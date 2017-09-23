@@ -23,6 +23,8 @@ use SimpleComplex\Utils\Bootstrap;
  * See the bootstrapper.
  * @see HttpServiceSlim::bootstrap()
  *
+ * @uses-dependency-container locale, logger, inspect
+ *
  * @package SimpleComplex\Http
  */
 abstract class HttpServiceSlim
@@ -316,7 +318,7 @@ abstract class HttpServiceSlim
     }
 
     /**
-     * Bootstraps Slim, and the simplecomplex framework for all services.
+     * Bootstraps Slim, and the SimpleComplex framework for all services.
      *
      * @param Callable|null $customLogger
      *      Custom logger; default is JsonLog.
