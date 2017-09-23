@@ -4,6 +4,7 @@
     "description": "High-level HTTP client and (Slim) service utility. Client provides response validation and mocking; service provides standardized and predictable responses.",
     "keywords": ["HTTP client", "HTTP service", "HTTP response mock", "HTTP response validate", "PHP"],
     "homepage": "https://github.com/simplecomplex/php-http",
+    "license": "MIT",
     "authors": [
         {
             "name": "Jacob Friis Mathiasen",
