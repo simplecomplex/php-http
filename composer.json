@@ -13,13 +13,13 @@
     ],
     "require": {
         "psr/log": "^1.0",
-        "simplecomplex/utils": "^1.0 || dev-develop",
-        "simplecomplex/cache": "^1.0 || dev-develop",
-        "simplecomplex/config": "^1.0 || dev-develop",
+        "simplecomplex/utils": "^1.1 || dev-develop",
+        "simplecomplex/cache": "^1.1 || dev-develop",
+        "simplecomplex/config": "^1.1 || dev-develop",
         "simplecomplex/locale": "^1.0 || dev-develop",
         "simplecomplex/validate": "^1.0 || dev-develop",
         "simplecomplex/restmini": "^1.0 || dev-develop",
-        "simplecomplex/inspect": "^2.0 || dev-develop"
+        "simplecomplex/inspect": "^2.1 || dev-develop"
     },
     "suggest": {
         "slim/slim": "^3.8.1"
