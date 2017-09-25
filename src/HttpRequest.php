@@ -739,7 +739,7 @@ class HttpRequest extends Explorable
                     if (!empty($this->options['err_on_resource_not_found'])) {
                         // Keep status; flag failure on response body.
                         $body->success = false;
-                        $this->code = HttpClient::ERROR_CODES['resource_not_found'];
+                        $this->code = HttpClient::ERROR_CODES['resource-not-found'];
                     }
                     break;
                 case 304: // Not Modified.
