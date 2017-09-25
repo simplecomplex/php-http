@@ -144,12 +144,16 @@ class HttpClient extends Explorable
 
     /**
      * Options supported:
+     * - (bool) debug_dump
      * - (bool|arr) cacheable
      * - (bool|arr) validate_response: do validate response against rule set(s)
      * - (bool|arr) mock_response: use response mock
+     * - (int) retry_on_unavailable: millisecs; try again later upon
+     *      503 Service Unavailable|host not found|connection failed
      * - (arr) require_response_headers: list of response header keys required
      * - (bool) err_on_endpoint_not_found: 404 + HTML
      * - (bool) err_on_resource_not_found: 204, 404 + JSON
+     * - (arr) log_warning_on_status: key is status code, value is true
      *
      * The cacheable option as array:
      * - (int) ttl: time-to-live, default CACHEABLE_TIME_TO_LIVE
