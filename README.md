@@ -7,7 +7,7 @@ Service provides standardized and predictable responses.
 <details>
 <summary>
 
-### Client ###
+### ▹ Client ###
 </summary>
 
 #### Request options ####
@@ -45,7 +45,7 @@ Sounds like a lot of work, but it isn't really.
   <details>
   <summary>
   
-  #### Client CLI commands ####
+  #### ▹▹ Client CLI commands ####
   </summary>
 
 ##### (remote) Service configuration #####
@@ -88,7 +88,7 @@ php cli.phpsh cache-delete http-response_mock prvdr.example-service.ndpnt.GET
   <details>
   <summary>
   
-  #### Client error codes ####
+  #### ▹▹ Client error codes ####
   </summary>
   
   For every error code there's an equivalent prefab safe and user-friendly (localizable) error message.
@@ -126,7 +126,7 @@ php cli.phpsh cache-delete http-response_mock prvdr.example-service.ndpnt.GET
 <details>
 <summary>
 
-### Service ###
+### ▹ Service ###
 </summary>
 
 Producing a service response is not as hard as requesting a remote service,  
@@ -148,7 +148,7 @@ Place a ```.cross_origin_allow_sites``` text file in document root, containing l
   <details>
   <summary>
   
-  #### Service error codes ####
+  #### ▹▹ Service error codes ####
   </summary>
   
   For every error code there's an equivalent prefab safe and user-friendly (localizable) error message.
@@ -194,7 +194,7 @@ about the remote request/response
 <details>
   <summary>
   
-#### Service response headers ####
+#### ▹ Service response headers ####
 </summary>
 
 **Http** uses a number of custom response headers, to flag stuff to the client.  
