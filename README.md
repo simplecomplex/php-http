@@ -173,7 +173,7 @@ A service requestor should never be in doubt whether a request to your service w
 ```HttpClient->request()``` returns ```HttpResponse``` object:
 
 - status ```int```: suggested status to send to requestor
-- headers ```array```: suggested header to send
+- headers ```array```: suggested headers to send
 - body ```HttpResponseBody```
   - **success** ```bool```
   - **status** ```int```: status received from remote service
