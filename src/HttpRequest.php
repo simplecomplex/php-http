@@ -640,6 +640,8 @@ class HttpRequest extends Explorable
             return $response;
         }
 
+        $any_body = false;
+
         // Copy original status, we may overwrite it.
         $original_status = $response->status;
         // Investigate RestMini Client error.
@@ -732,6 +734,8 @@ class HttpRequest extends Explorable
             switch ($original_status) {
                 case 200:
                 case 201:
+                    $any_body = true;
+                    break;
                 case 202: // Accepted.
                     // Swell.
                     break;
@@ -753,7 +757,7 @@ class HttpRequest extends Explorable
                 case 404:
                     if (
                         !empty($this->options['err_on_endpoint_not_found'])
-                        && stripos($info['content_type'], 'JSON') === false
+                        && $info['content_type'] && stripos($info['content_type'], 'JSON') === false
                     ) {
                         // Keep status; flag failure on response body.
                         $body->success = false;
@@ -852,7 +856,7 @@ class HttpRequest extends Explorable
                         );
             }
         }
-        elseif ($this->validateResponse) {
+        elseif ($any_body && $this->validateResponse) {
             $this->validate($response);
         }
         elseif ($this->cacheable) {
