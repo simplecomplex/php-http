@@ -49,17 +49,16 @@ class HttpLogger
      * @param string $preface
      * @param \Throwable|null $exception
      * @param array $variables
+     * @param array $context
      */
-    public function log(int $severity, string $preface, /*?\Throwable*/ $exception = null, $variables = [])
-    {
+    public function log(
+        int $severity, string $preface, /*?\Throwable*/ $exception = null, $variables = [], array $context = []
+    ) {
         $container = Dependency::container();
         /** @var \SimpleComplex\Inspect\Inspect $inspect */
         $inspect = $container->get('inspect');
 
-        $context = [
-            'type' => $this->type,
-            'subType' => $this->type,
-        ];
+        $context['type'] = $context['subType'] = $this->type;
         $msg = $preface . ' ' . $this->operation;
 
         if ($exception) {

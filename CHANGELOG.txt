@@ -1,3 +1,7 @@
+SimpleComplex/Http 1.x, 2017-10-06
+----------------------------------
+- Provide PSR-3 Log context; to support providing JsonLog event correlationId.
+
 SimpleComplex/Http 1.x, 2017-10-05
 ----------------------------------
 - Don't assume non-empty response content type header when status 404.

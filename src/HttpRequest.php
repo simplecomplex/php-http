@@ -824,7 +824,8 @@ class HttpRequest extends Explorable
                     'info' => $info ? $info :
                         'see previous warning event, type or subtype \'' . $this->properties['clientLogType'] . '\',',
                     'response' => $response,
-                ]
+                ],
+                $this->logContext($response)
             );
             // Set body 'message'.
             $container = Dependency::container();
@@ -868,7 +869,8 @@ class HttpRequest extends Explorable
                 LOG_DEBUG,
                 'Http' . (empty($this->options['mock_response']) ? '' : ' mocked') . ' response ◀',
                 null,
-                $response
+                $response,
+                $this->logContext($response)
             );
         }
 
@@ -977,7 +979,8 @@ class HttpRequest extends Explorable
                         [
                             'files missing' => $read_filenames,
                             'files found' => array_keys($files),
-                        ]
+                        ],
+                        $this->logContext($response)
                     );
                 }
                 else {
@@ -995,7 +998,9 @@ class HttpRequest extends Explorable
                         'A rule set JSON file is not parsable, see previous.',
                         $this->code + $http_settings->client('error_code_offset'),
                         $xcptn
-                    )
+                    ),
+                    [],
+                    $this->logContext($response)
                 );
             } catch (\Throwable $xcptn) {
                 if (!$path) {
@@ -1008,7 +1013,9 @@ class HttpRequest extends Explorable
                             . static::PATH_VALIDATION_RULE_SET . '] is not a valid path.',
                             $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
-                        )
+                        ),
+                        [],
+                        $this->logContext($response)
                     );
                 } else {
                     $this->code = HttpClient::ERROR_CODES['local-configuration'];
@@ -1019,7 +1026,9 @@ class HttpRequest extends Explorable
                             'Some rule set JSON file is non-unique, non-existent or unreadable, see previous.',
                             $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
-                        )
+                        ),
+                        [],
+                        $this->logContext($response)
                     );
                 }
             }
@@ -1059,6 +1068,7 @@ class HttpRequest extends Explorable
                 /** @var HttpSettings $http_settings */
                 $http_settings = $container->get('http-settings');
                 $this->code = HttpClient::ERROR_CODES['response-validation'];
+                $log_context = $this->logContext($response);
                 $this->httpLogger->log(
                     LOG_ERR,
                     'Http validate response',
@@ -1066,7 +1076,8 @@ class HttpRequest extends Explorable
                         'Response failed validation.',
                         $this->code + $http_settings->client('error_code_offset')
                     ),
-                    $records
+                    $records,
+                    $log_context
                 );
                 // Log response body separately, as warning.
                 // Makes it easier to correlate validation records
@@ -1075,7 +1086,8 @@ class HttpRequest extends Explorable
                     LOG_WARNING,
                     'Http invalid response body',
                     null,
-                    $response->body
+                    $response->body,
+                    $log_context
                 );
             }
         }
@@ -1287,5 +1299,31 @@ class HttpRequest extends Explorable
                 )
             )
         ];
+    }
+
+    /**
+     * Provides PSR-3 logger context properties.
+     *
+     * @see \Psr\Log\LoggerInterface::log()
+     * @see \SimpleComplex\JsonLog\JsonLogEvent::correlationId()
+     *
+     * @param HttpResponse $response
+     * @param array $context
+     *
+     * @return array
+     */
+    protected function logContext(HttpResponse $response, array $context = []) {
+        /**
+         * Provide JsonLog event correlationId from response header.
+         *
+         * @see \SimpleComplex\JsonLog\JsonLogEvent::correlationId()
+         */
+        if (
+            !empty($this->options['get_headers']) && !empty($this->options['correlation_id_header'])
+            && !empty($response->originalHeaders[$this->options['correlation_id_header']])
+        ) {
+            $context['correlationId'] = $response->originalHeaders[$this->options['correlation_id_header']];
+        }
+        return $context;
     }
 }
