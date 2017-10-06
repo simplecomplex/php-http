@@ -1,6 +1,7 @@
 SimpleComplex/Http 1.x, 2017-10-06
 ----------------------------------
 - Provide PSR-3 Log context; to support providing JsonLog event correlationId.
+- Release 1.0.3.
 
 SimpleComplex/Http 1.x, 2017-10-05
 ----------------------------------
