@@ -248,6 +248,7 @@ class HttpClient extends Explorable
         // 400 Bad Request, 412 Precondition Failed, 422 Unprocessable Entity.
         'remote-validation-bad' => 70,
         'remote-validation-failed' => 71,
+        'remote-conflict' => 75,
         // Content type mismatch.
         'response-type' => 81,
         // Parse error.

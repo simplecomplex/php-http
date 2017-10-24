@@ -769,6 +769,11 @@ class HttpRequest extends Explorable
                         $this->code = HttpClient::ERROR_CODES['resource-not-found'];
                     }
                     break;
+                case 409: // Conflict.
+                    $body->success = false;
+                    // Keep status.
+                    $this->code = HttpClient::ERROR_CODES['remote-conflict'];
+                    break;
                 case 412: // Precondition Failed; interpretes to validation failure.
                 case 422: // Unprocessable Entity (WebDAV, but gaining support).
                     $body->success = false;
