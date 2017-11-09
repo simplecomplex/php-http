@@ -757,7 +757,7 @@ class HttpRequest extends Explorable
                 case 404:
                     if (
                         !empty($this->options['err_on_endpoint_not_found'])
-                        && $info['content_type'] && stripos($info['content_type'], 'JSON') === false
+                        && $info['content_type'] && strpos($info['content_type'], 'html') !== false
                     ) {
                         // Keep status; flag failure on response body.
                         $body->success = false;

@@ -195,7 +195,7 @@ class HttpClient extends Explorable
         'require_response_headers',
         // bool; 404 + HTML.
         'err_on_endpoint_not_found',
-        // bool; unexpected 204, 404 + JSON.
+        // bool; unexpected 204, 404 + HTML.
         'err_on_resource_not_found',
         // arr; log erroneous response as warning (not error).
         // Key status is string (not integer), value is boolean.
