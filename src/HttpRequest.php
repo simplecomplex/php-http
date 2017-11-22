@@ -754,6 +754,16 @@ class HttpRequest extends Explorable
                     // Keep status.
                     $this->code = HttpClient::ERROR_CODES['remote-validation-bad'];
                     break;
+                case 401: // Unauthorized; but interpretated as unauthenticated.
+                    $body->success = false;
+                    // Keep status.
+                    $this->code = HttpClient::ERROR_CODES['unauthenticated'];
+                    break;
+                case 403: // Forbidden; but interpretated as unauthorized.
+                    $body->success = false;
+                    // Keep status.
+                    $this->code = HttpClient::ERROR_CODES['unauthorized'];
+                    break;
                 case 404:
                     if (
                         !empty($this->options['err_on_endpoint_not_found'])

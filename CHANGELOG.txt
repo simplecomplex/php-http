@@ -1,3 +1,9 @@
+SimpleComplex/Http 1.x, 2017-11-22
+----------------------------------
+- Client support status 401 Unauthorized (interpreted as unauthenticated)
+  and status 403 Forbidden (interpreted as unauthorized).
+- Release 1.0.6.
+
 SimpleComplex/Http 1.x, 2017-11-09
 ----------------------------------
 - Option err_on_endpoint_not_found means 404+HTML; not 404!JSON.
