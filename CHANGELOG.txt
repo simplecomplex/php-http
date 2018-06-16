@@ -1,3 +1,7 @@
+SimpleComplex/Http 1.x, 2018-06-16
+----------------------------------
+- Example .ini and .json files must use ext ...example.
+
 SimpleComplex/Http 1.x, 2017-11-22
 ----------------------------------
 - Client support status 401 Unauthorized (interpreted as unauthenticated)
