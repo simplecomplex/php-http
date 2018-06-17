@@ -13,6 +13,8 @@ use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
 use SimpleComplex\Utils\PathFileListUnique;
+use SimpleComplex\Utils\Exception\FileNonUniqueException;
+use SimpleComplex\Utils\Exception\ParseJsonException;
 use SimpleComplex\RestMini\Client as RestMiniClient;
 use SimpleComplex\Validate\ValidationRuleSet;
 use SimpleComplex\Http\Exception\HttpLogicException;
@@ -1004,7 +1006,20 @@ class HttpRequest extends Explorable
                         $rule_sets[$variant] = $utils->parseJsonFile($file_path);
                     }
                 }
-            } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
+            } catch (FileNonUniqueException $xcptn) {
+                $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http validate response',
+                    new HttpConfigurationException(
+                        'Some rule set JSON filenames are non-unique, see previous.',
+                        $this->code + $http_settings->client('error_code_offset'),
+                        $xcptn
+                    ),
+                    [],
+                    $this->logContext($response)
+                );
+            } catch (ParseJsonException $xcptn) {
                 $this->code = HttpClient::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
@@ -1038,7 +1053,7 @@ class HttpRequest extends Explorable
                         LOG_ERR,
                         'Http validate response',
                         new HttpConfigurationException(
-                            'Some rule set JSON file is non-unique, non-existent or unreadable, see previous.',
+                            'Some rule set JSON file is non-existent or unreadable, see previous.',
                             $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
                         ),
@@ -1228,7 +1243,18 @@ class HttpRequest extends Explorable
                     $mock = $utils->parseJsonFile($files[$base_name . '.mock.json']);
                     HttpResponse::cast($mock);
                 }
-            } catch (\SimpleComplex\Utils\Exception\ParseJsonException $xcptn) {
+            } catch (FileNonUniqueException $xcptn) {
+                $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http mock response',
+                    new HttpConfigurationException(
+                        'Some mock JSON filenames are non-unique, see previous.',
+                        $this->code + $http_settings->client('error_code_offset'),
+                        $xcptn
+                    )
+                );
+            } catch (ParseJsonException $xcptn) {
                 $this->code = HttpClient::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
@@ -1257,7 +1283,7 @@ class HttpRequest extends Explorable
                         LOG_ERR,
                         'Http mock response',
                         new HttpConfigurationException(
-                            'Mock JSON file is non-unique, non-existent, unreadable or can\'t be cast to HttpResponse'
+                            'Mock JSON file is non-existent, unreadable or can\'t be cast to HttpResponse'
                             . ', see previous.',
                             $this->code + $http_settings->client('error_code_offset'),
                             $xcptn
