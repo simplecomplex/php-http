@@ -1,6 +1,7 @@
 SimpleComplex/Http 1.x, 2018-06-19
 ----------------------------------
 - HttpRequest validate and mock use Utils PathList instead of it's predecessor.
+- Release 1.2.
 
 SimpleComplex/Http 1.x, 2018-06-17
 ----------------------------------
