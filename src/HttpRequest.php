@@ -12,7 +12,7 @@ namespace SimpleComplex\Http;
 use SimpleComplex\Utils\Explorable;
 use SimpleComplex\Utils\Utils;
 use SimpleComplex\Utils\Dependency;
-use SimpleComplex\Utils\PathFileListUnique;
+use SimpleComplex\Utils\PathList;
 use SimpleComplex\Utils\Exception\FileNonUniqueException;
 use SimpleComplex\Utils\Exception\ParseJsonException;
 use SimpleComplex\RestMini\Client as RestMiniClient;
@@ -973,8 +973,9 @@ class HttpRequest extends Explorable
             try {
                 // Throws various exceptions.
                 $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
-                // Throws \InvalidArgumentException, \RuntimeException.
-                $files = (new PathFileListUnique($path, ['validation-rule-set.json']))->getArrayCopy();
+                // Throws \InvalidArgumentException, FileNonUniqueException.
+                $files = (new PathList($path))->requireUnique()->includeExtensions(['validation-rule-set.json'])
+                    ->find()->getArrayCopy();
                 foreach ($read_filenames as $variant => $filename) {
                     if (isset($files[$filename])) {
                         $found_file_paths[$variant] = $files[$filename];
@@ -1222,8 +1223,9 @@ class HttpRequest extends Explorable
             try {
                 // Throws various exceptions.
                 $path = $utils->resolvePath(static::PATH_MOCK);
-                // Throws \InvalidArgumentException, \RuntimeException.
-                $files = (new PathFileListUnique($path, ['mock.json']))->getArrayCopy();
+                // Throws \InvalidArgumentException, FileNonUniqueException.
+                $files = (new PathList($path))->requireUnique()->includeExtensions(['mock.json'])
+                    ->find()->getArrayCopy();
                 if (!isset($files[$base_name . '.mock.json'])) {
                     $this->code = HttpClient::ERROR_CODES['local-configuration'];
                     $this->httpLogger->log(
