@@ -48,11 +48,8 @@ fi
 
 ### Configuration ######################
 
-## Symlink base configuration dir.
-ln -s ${path_backend}'/vendor/simplecomplex/http/config-ini/base' ${path_conf}'/ini/base/http'
-
-## Symlink override configuration dir.
-ln -s ${path_backend}'/vendor/simplecomplex/http/config-ini/'${environment}'-override' ${path_conf}'/ini/override/http'
+## Symlink configuration dir.
+ln -s ${path_backend}'/vendor/simplecomplex/http/config-ini' ${path_conf}'/ini/base/http'
 
 
 ### Service response validation ########
