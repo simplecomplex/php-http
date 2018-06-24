@@ -1,5 +1,13 @@
-SimpleComplex/Http 1.x, 2018-06-23
+SimpleComplex/Http 2.x, 2018-06-24
 ----------------------------------
+- Support and prefer finding validation and mocking .json files via config .ini
+  lists http:responseValidationRuleSetPaths and http:responseMockPaths, instead
+  of files symlinked/copied to conf dir.
+- Release 2.0.
+
+SimpleComplex/Http 2.x, 2018-06-23
+----------------------------------
+- New major version because new config regime may break things for users.
 - Don't provide separate base and override config .inis; user must of own accord
   override (in prod/test environments) using custom .ini file.
 

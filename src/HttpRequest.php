@@ -109,6 +109,8 @@ class HttpRequest extends Explorable
     /**
      * Path to where response validation rule set .json-files reside.
      *
+     * Obsolete if using config .ini http:responseValidationRuleSetPaths lists.
+     *
      * Relative path is relative to document root.
      *
      * @var string
@@ -117,6 +119,8 @@ class HttpRequest extends Explorable
 
     /**
      * Path to where response mock .json-files reside.
+     *
+     * Obsolete if using config .ini http:responseMockPaths lists.
      *
      * Relative path is relative to document root.
      *
@@ -944,7 +948,7 @@ class HttpRequest extends Explorable
 
         // Retrieve rule sets from cache, or memorize which to build from JSON.
         $base_name = $this->properties['operation'];
-        $extension = '.validation-rule-set.json';
+        $extension = 'validation-rule-set.json';
         $read_filenames = $found_file_paths = $do_cache_sets = [];
         foreach ($rule_sets as $variant => &$rule_set) {
             if (
@@ -953,7 +957,8 @@ class HttpRequest extends Explorable
                     $base_name . ($variant == 'default' ? '' : ('.' . $variant))
                 ))
             ) {
-                $read_filenames[$variant] = $base_name . ($variant == 'default' ? '' : ('.' . $variant)) . $extension;
+                $read_filenames[$variant] = $base_name . ($variant == 'default' ? '' : ('.' . $variant))
+                    . '.' . $extension;
                 $found_file_paths[$variant] = null;
                 if (!$this->validateResponse['no_cache_rules']) {
                     $do_cache_sets[] = $variant;
@@ -968,20 +973,52 @@ class HttpRequest extends Explorable
             // Retrieve JSON files from validation rule set path.
             /** @var HttpSettings $http_settings */
             $http_settings = $container->get('http-settings');
-            $utils = Utils::getInstance();
-            $path = '';
             try {
-                // Throws various exceptions.
-                $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
+                $utils = Utils::getInstance();
+
                 // Throws \InvalidArgumentException, FileNonUniqueException.
-                $files = (new PathList($path))->requireUnique()->includeExtensions(['validation-rule-set.json'])
-                    ->find()->getArrayCopy();
-                foreach ($read_filenames as $variant => $filename) {
-                    if (isset($files[$filename])) {
-                        $found_file_paths[$variant] = $files[$filename];
-                        unset($read_filenames[$variant]);
+                $files = (new PathList(''))->requireUnique()->includeExtensions([$extension]);
+                $files_in_packages = $files_in_conf_dir = [];
+
+                // Look for files defined by config .ini list
+                // http:responseValidationRuleSetPaths. ------------------------
+                /** @var \SimpleComplex\Config\IniSectionedConfig $config */
+                $config = $container->get('config');
+                $paths = $config->get('http', 'responseValidationRuleSetPaths', []);
+                if ($paths) {
+                    $vender_path = $utils->documentRoot() . '/' . $utils->vendorDir();
+                    foreach ($paths as $path) {
+                        $files->path($vender_path . '/' . $path)->find();
+                    }
+                    if ($files->count()) {
+                        $files_in_packages = $files->getArrayCopy();
+                        foreach ($read_filenames as $variant => $filename) {
+                            if (isset($files_in_packages[$filename])) {
+                                $found_file_paths[$variant] = $files_in_packages[$filename];
+                                unset($read_filenames[$variant]);
+                            }
+                        }
                     }
                 }
+
+                // All found?
+                if ($read_filenames) {
+                    // Look for files placed in ../conf dir (old regime). ------
+                    $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
+                    if (file_exists($path) && is_dir($path)) {
+                        $files->reset()->path($path)->find();
+                        if ($files->count()) {
+                            $files_in_conf_dir = $files->getArrayCopy();
+                            foreach ($read_filenames as $variant => $filename) {
+                                if (isset($files_in_conf_dir[$filename])) {
+                                    $found_file_paths[$variant] = $files_in_conf_dir[$filename];
+                                    unset($read_filenames[$variant]);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // All found?
                 if ($read_filenames) {
                     $this->code = HttpClient::ERROR_CODES['local-configuration'];
@@ -996,7 +1033,8 @@ class HttpRequest extends Explorable
                         ),
                         [
                             'files missing' => $read_filenames,
-                            'files found' => array_keys($files),
+                            'files found in packages' => array_keys($files_in_packages),
+                            'files found in conf dir' => array_keys($files_in_conf_dir),
                         ],
                         $this->logContext($response)
                     );
@@ -1007,7 +1045,8 @@ class HttpRequest extends Explorable
                         $rule_sets[$variant] = $utils->parseJsonFile($file_path);
                     }
                 }
-            } catch (FileNonUniqueException $xcptn) {
+            }
+            catch (FileNonUniqueException $xcptn) {
                 $this->code = HttpClient::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
@@ -1020,7 +1059,8 @@ class HttpRequest extends Explorable
                     [],
                     $this->logContext($response)
                 );
-            } catch (ParseJsonException $xcptn) {
+            }
+            catch (ParseJsonException $xcptn) {
                 $this->code = HttpClient::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
@@ -1033,35 +1073,20 @@ class HttpRequest extends Explorable
                     [],
                     $this->logContext($response)
                 );
-            } catch (\Throwable $xcptn) {
-                if (!$path) {
-                    $this->code = HttpClient::ERROR_CODES['local-algo'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http validate response',
-                        new HttpLogicException(
-                            get_class($this) . '::PATH_VALIDATION_RULE_SET path['
-                            . static::PATH_VALIDATION_RULE_SET . '] is not a valid path.',
-                            $this->code + $http_settings->client('error_code_offset'),
-                            $xcptn
-                        ),
-                        [],
-                        $this->logContext($response)
-                    );
-                } else {
-                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http validate response',
-                        new HttpConfigurationException(
-                            'Some rule set JSON file is non-existent or unreadable, see previous.',
-                            $this->code + $http_settings->client('error_code_offset'),
-                            $xcptn
-                        ),
-                        [],
-                        $this->logContext($response)
-                    );
-                }
+            }
+            catch (\Throwable $xcptn) {
+                $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http validate response',
+                    new HttpConfigurationException(
+                        'Some rule set JSON file is non-existent or unreadable, see previous.',
+                        $this->code + $http_settings->client('error_code_offset'),
+                        $xcptn
+                    ),
+                    [],
+                    $this->logContext($response)
+                );
             }
         }
 
@@ -1217,35 +1242,66 @@ class HttpRequest extends Explorable
         }
         $mock = null;
         if ($noCacheMock || !($mock = $mock_cache_store->get($base_name))) {
-            // Find JSON file in mock path.
-            $utils = Utils::getInstance();
-            $path = '';
+            // Find JSON file.
             try {
-                // Throws various exceptions.
-                $path = $utils->resolvePath(static::PATH_MOCK);
+                $utils = Utils::getInstance();
+
                 // Throws \InvalidArgumentException, FileNonUniqueException.
-                $files = (new PathList($path))->requireUnique()->includeExtensions(['mock.json'])
-                    ->find()->getArrayCopy();
-                if (!isset($files[$base_name . '.mock.json'])) {
-                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http mock response',
-                        new HttpConfigurationException(
-                            get_class($this) . '::PATH_MOCK path['
-                            . static::PATH_MOCK . '] have no file of variant[' . $variant . '] as child or descendant.',
-                            $this->code + $http_settings->client('error_code_offset')
-                        ),
-                        [
-                            'file required' => $base_name . '.mock.json',
-                            'files found' => array_keys($files),
-                        ]
-                    );
-                } else {
-                    $mock = $utils->parseJsonFile($files[$base_name . '.mock.json']);
+                $files = (new PathList(''))->requireUnique()->includeExtensions(['mock.json']);
+                $files_in_packages = $files_in_conf_dir = [];
+
+                // Look for files defined by config .ini list
+                // http:responseMockPaths. -------------------------------------
+                /** @var \SimpleComplex\Config\IniSectionedConfig $config */
+                $config = $container->get('config');
+                $paths = $config->get('http', 'responseMockPaths', []);
+                if ($paths) {
+                    $vender_path = $utils->documentRoot() . '/' . $utils->vendorDir();
+                    foreach ($paths as $path) {
+                        $files->path($vender_path . '/' . $path)->find();
+                    }
+                    if ($files->count()) {
+                        $files_in_packages = $files->getArrayCopy();
+                    }
+                }
+
+                if (!$files_in_packages || !isset($files_in_packages[$base_name . '.mock.json'])) {
+                    // Look for files placed in ../conf dir (old regime). ------
+                    $path = $utils->resolvePath(static::PATH_MOCK);
+                    if (file_exists($path) && is_dir($path)) {
+                        $files->reset()->path($path)->find();
+                        if ($files->count()) {
+                            $files_in_conf_dir = $files->getArrayCopy();
+                        }
+                    }
+                    if (!$files_in_conf_dir || !isset($files_in_conf_dir[$base_name . '.mock.json'])) {
+                        $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                        $this->httpLogger->log(
+                            LOG_ERR,
+                            'Http mock response',
+                            new HttpConfigurationException(
+                                get_class($this) . '::PATH_MOCK path['
+                                . static::PATH_MOCK . '] have no file of variant[' . $variant . '] as child or descendant.',
+                                $this->code + $http_settings->client('error_code_offset')
+                            ),
+                            [
+                                'file required' => $base_name . '.mock.json',
+                                'files found in packages' => array_keys($files_in_packages),
+                                'files found in conf dir' => array_keys($files_in_conf_dir),
+                            ]
+                        );
+                    }
+                    else {
+                        $mock = $utils->parseJsonFile($files_in_conf_dir[$base_name . '.mock.json']);
+                        HttpResponse::cast($mock);
+                    }
+                }
+                else {
+                    $mock = $utils->parseJsonFile($files_in_packages[$base_name . '.mock.json']);
                     HttpResponse::cast($mock);
                 }
-            } catch (FileNonUniqueException $xcptn) {
+            }
+            catch (FileNonUniqueException $xcptn) {
                 $this->code = HttpClient::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
@@ -1256,7 +1312,8 @@ class HttpRequest extends Explorable
                         $xcptn
                     )
                 );
-            } catch (ParseJsonException $xcptn) {
+            }
+            catch (ParseJsonException $xcptn) {
                 $this->code = HttpClient::ERROR_CODES['local-configuration'];
                 $this->httpLogger->log(
                     LOG_ERR,
@@ -1267,31 +1324,19 @@ class HttpRequest extends Explorable
                         $xcptn
                     )
                 );
-            } catch (\Throwable $xcptn) {
-                if (!$path) {
-                    $this->code = HttpClient::ERROR_CODES['local-algo'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http mock response',
-                        new HttpLogicException(
-                            get_class($this) . '::PATH_MOCK path[' . static::PATH_MOCK . '] is not a valid path.',
-                            $this->code + $http_settings->client('error_code_offset'),
-                            $xcptn
-                        )
-                    );
-                } else {
-                    $this->code = HttpClient::ERROR_CODES['local-configuration'];
-                    $this->httpLogger->log(
-                        LOG_ERR,
-                        'Http mock response',
-                        new HttpConfigurationException(
-                            'Mock JSON file is non-existent, unreadable or can\'t be cast to HttpResponse'
-                            . ', see previous.',
-                            $this->code + $http_settings->client('error_code_offset'),
-                            $xcptn
-                        )
-                    );
-                }
+            }
+            catch (\Throwable $xcptn) {
+                $this->code = HttpClient::ERROR_CODES['local-configuration'];
+                $this->httpLogger->log(
+                    LOG_ERR,
+                    'Http mock response',
+                    new HttpConfigurationException(
+                        'Mock JSON file is non-existent, unreadable or can\'t be cast to HttpResponse'
+                        . ', see previous.',
+                        $this->code + $http_settings->client('error_code_offset'),
+                        $xcptn
+                    )
+                );
             }
             if (!$noCacheMock && !$this->code) {
                 $mock_cache_store->set($base_name, $mock);

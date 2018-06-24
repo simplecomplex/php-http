@@ -1,0 +1,38 @@
+#!/bin/bash -e
+# Stop (don't exit) on error.
+#-------------------------------------------------------------------------------
+### Library: simplecomplex/http
+### PHP source dir: backend
+### Angular source dir: frontend
+
+## PLACE YOURSELF IN THE SITE'S DOCUMENT ROOT.
+#cd [document root]
+
+## Script accepts one optional 'environment' argument: dev|prod
+
+# Establish environment: dev|prod.
+if [ "$1" == 'prod' ]; then
+    environment='prod'
+else
+    environment='dev'
+fi
+
+# Set document root var.
+doc_root=`pwd`
+
+
+#### BACKEND CONFIGURATION #####################################################
+
+### (dev only) CROSS ORIGIN SITES ######
+
+if [ ${environment} != 'prod' ]; then
+    # Comma-separated list (including HTTP port).
+    # Angular (ng serve, npm start): http://localhost:4200.
+    echo "http://localhost:4200" > ${doc_root}'/.cross_origin_allow_sites'
+fi
+
+
+### Success ############################
+echo -e "\n\033[01;32m[success]\033[0m"' SimpleComplex Http setup succeeded.'
+
+#### END #######################################################################

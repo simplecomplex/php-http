@@ -1,3 +1,4 @@
+// See config-ini/http.global.ini: responseValidationRuleSetPaths.
 // Will be cast to SimpleComplex\Validate\ValidationRuleSet.
 // JSON parser allows line comments; Utils->parseIniString().
 //{

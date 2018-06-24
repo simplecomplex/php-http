@@ -1,3 +1,4 @@
+// See config-ini/http.global.ini: responseMockPaths.
 // Will be cast to SimpleComplex\Http\HttpResponse.
 // JSON parser allows line comments; Utils->parseIniString().
 {
