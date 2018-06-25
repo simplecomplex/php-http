@@ -1006,7 +1006,7 @@ class HttpRequest extends Explorable
                     // Look for files placed in ../conf dir (old regime). ------
                     $path = $utils->resolvePath(static::PATH_VALIDATION_RULE_SET);
                     if (file_exists($path) && is_dir($path)) {
-                        $files->reset()->path($path)->find();
+                        $files->clear()->path($path)->find();
                         if ($files->count()) {
                             $files_in_conf_dir = $files->getArrayCopy();
                             foreach ($read_filenames as $variant => $filename) {
@@ -1269,7 +1269,7 @@ class HttpRequest extends Explorable
                     // Look for files placed in ../conf dir (old regime). ------
                     $path = $utils->resolvePath(static::PATH_MOCK);
                     if (file_exists($path) && is_dir($path)) {
-                        $files->reset()->path($path)->find();
+                        $files->clear()->path($path)->find();
                         if ($files->count()) {
                             $files_in_conf_dir = $files->getArrayCopy();
                         }

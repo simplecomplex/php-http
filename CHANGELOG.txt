@@ -1,3 +1,8 @@
+SimpleComplex/Http 2.x, 2018-06-25
+----------------------------------
+- Utils PathList::clear() renamed; from reset().
+- Release 2.0.1.
+
 SimpleComplex/Http 2.x, 2018-06-24
 ----------------------------------
 - Support and prefer finding validation and mocking .json files via config .ini
