@@ -1,3 +1,8 @@
+SimpleComplex/Http 2.x, 2018-08-30
+----------------------------------
+- Provide fallback non-essential dependency injection container items
+  for HttpClient and classes it may effectively use.
+
 SimpleComplex/Http 2.x, 2018-06-25
 ----------------------------------
 - Utils PathList::clear() renamed; from reset().

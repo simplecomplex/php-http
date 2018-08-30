@@ -334,6 +334,31 @@ class HttpClient extends Explorable
     {
         $container = Dependency::container();
 
+        // Provide fallback non-essential dependency injection container items;
+        // for this class and classes it may effectively use.
+        if (!$container->has('http-settings')) {
+            Dependency::genericSet('http-settings', function() {
+                return new HttpSettings();
+            });
+        }
+        if (!$container->has('application-id')) {
+            Dependency::genericSet('application-id', function() {
+                return 'application-id_undefined';
+            });
+        }
+        if (!$container->has('application-title')) {
+            Dependency::genericSet('application-title', function() use ($container) {
+                /** @var \SimpleComplex\Locale\AbstractLocale $locale */
+                $locale = $container->get('locale');
+                // Cascading: application-id or http.
+                return $locale->text(
+                    $container->get('application-id') . ':application-title',
+                    [],
+                    $locale->text('http:application-title')
+                );
+            });
+        }
+
         if (strpos($provider, '.') !== false) {
             throw new \InvalidArgumentException(
                 'Arg provider name is invalid.',
