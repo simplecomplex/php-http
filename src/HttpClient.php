@@ -343,7 +343,7 @@ class HttpClient extends Explorable
         }
         if (!$container->has('application-id')) {
             Dependency::genericSet('application-id', function() {
-                return 'application-id_undefined';
+                return 'application-id-undefined';
             });
         }
         if (!$container->has('application-title')) {
