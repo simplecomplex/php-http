@@ -1,3 +1,8 @@
+SimpleComplex/Http 2.x, 2018-09-05
+----------------------------------
+- Response validation shan't depend on a guess of which HTTP status codes may
+  produce HTTP body.
+
 SimpleComplex/Http 2.x, 2018-08-30
 ----------------------------------
 - Provide fallback non-essential dependency injection container items

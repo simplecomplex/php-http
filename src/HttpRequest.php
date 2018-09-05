@@ -646,8 +646,6 @@ class HttpRequest extends Explorable
             return $response;
         }
 
-        $any_body = false;
-
         // Copy original status, we may overwrite it.
         $original_status = $response->status;
         // Investigate RestMini Client error.
@@ -736,12 +734,10 @@ class HttpRequest extends Explorable
             // Arg $info will be non-empty, and if option 'record_args'
             // $info even contains the request arguments sent.
 
-            // Every status but 200|201|204|304|404 is considered malign.
+            // Every status but 200|201|202|204|304|404 is considered malign.
             switch ($original_status) {
                 case 200:
                 case 201:
-                    $any_body = true;
-                    break;
                 case 202: // Accepted.
                     // Swell.
                     break;
@@ -878,7 +874,7 @@ class HttpRequest extends Explorable
                         );
             }
         }
-        elseif ($any_body && $this->validateResponse) {
+        elseif ($this->validateResponse) {
             $this->validate($response);
         }
         elseif ($this->cacheable) {
