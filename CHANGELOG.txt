@@ -1,7 +1,6 @@
-SimpleComplex/Http 2.x, 2018-09-05
+SimpleComplex/Http 2.x, 2018-09-06
 ----------------------------------
-- Response validation shan't depend on a guess of which HTTP status codes may
-  produce HTTP body.
+- Support response validation on HTTP status 202; may produce body.
 
 SimpleComplex/Http 2.x, 2018-08-30
 ----------------------------------

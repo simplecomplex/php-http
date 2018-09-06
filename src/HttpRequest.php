@@ -646,6 +646,8 @@ class HttpRequest extends Explorable
             return $response;
         }
 
+        $any_body = false;
+
         // Copy original status, we may overwrite it.
         $original_status = $response->status;
         // Investigate RestMini Client error.
@@ -740,6 +742,7 @@ class HttpRequest extends Explorable
                 case 201:
                 case 202: // Accepted.
                     // Swell.
+                    $any_body = true;
                     break;
                 case 204: // No Content.
                     if (!empty($this->options['err_on_resource_not_found'])) {
@@ -874,7 +877,7 @@ class HttpRequest extends Explorable
                         );
             }
         }
-        elseif ($this->validateResponse) {
+        elseif ($any_body && $this->validateResponse) {
             $this->validate($response);
         }
         elseif ($this->cacheable) {
