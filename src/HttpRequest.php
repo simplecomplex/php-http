@@ -789,8 +789,18 @@ class HttpRequest extends Explorable
                     // Keep status.
                     $this->code = HttpClient::ERROR_CODES['remote-conflict'];
                     break;
-                case 412: // Precondition Failed; interpretes to validation failure.
+                // Various interpreted as validation failure.
+                case 410: // Gone.
+                case 411: // Length Required.
+                case 412: // Precondition Failed.
+                case 413: // Payload Too Large.
+                case 414: // URI Too Long.
+                case 415: // Unsupported Media Type; invalid argument type.
+                case 416: // Range Not Satisfiable; invalid argument value.
+                case 417: // Expectation Failed.
                 case 422: // Unprocessable Entity (WebDAV, but gaining support).
+                case 423: // Locked (WebDAV).
+                case 424: // Failed Dependency (WebDAV).
                     $body->success = false;
                     // Keep status.
                     $this->code = HttpClient::ERROR_CODES['remote-validation-failed'];
