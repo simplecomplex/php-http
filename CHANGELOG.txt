@@ -2,6 +2,7 @@ SimpleComplex/Http 2.x, 2018-09-15
 ----------------------------------
 - Request support more (validation failure) statuses; 410, 411,
   413 - 417, 423, 424.
+- Release 2.1.
 
 SimpleComplex/Http 2.x, 2018-09-06
 ----------------------------------
