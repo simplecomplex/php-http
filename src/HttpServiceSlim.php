@@ -89,8 +89,13 @@ abstract class HttpServiceSlim
         $cross_origin = !!(static::$crossOriginSiteAllowed = HttpService::crossOriginSiteAllowed());
 
         foreach (static::ROUTES as $route) {
-            $method = $route[0];
-            $app->{$method}($route[1], static::DEPENDENCY_ID . ':' . $route[2]);
+            $methods = $route[0];
+            if (is_array($methods)) {
+                $app->map($methods, $route[1], static::DEPENDENCY_ID . ':' . $route[2]);
+            }
+            else {
+                $app->{$methods}($route[1], static::DEPENDENCY_ID . ':' . $route[2]);
+            }
 
             // Set OPTION routes to respond to cross origin 'pre-flight' OPTION
             // request, which a browser issues if a request sends custom headers.

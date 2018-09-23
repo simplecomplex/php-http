@@ -1,7 +1,8 @@
 SimpleComplex/Http 2.x, 2018-09-23
 ----------------------------------
 - Service Slim use exception and error handlers of Utils.
-- Release 2.1.1.
+- Service Slim support multiple HTTP methods for single endpoint.
+- Release 2.1.2.
 
 SimpleComplex/Http 2.x, 2018-09-15
 ----------------------------------
