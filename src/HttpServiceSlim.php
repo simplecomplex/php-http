@@ -345,101 +345,10 @@ abstract class HttpServiceSlim
         $bootstrap($container, $customLogger);
 
         // Fallback exception handler.
-        set_exception_handler(function(\Throwable $throwable) use ($container) {
-            try {
-                $trace = null;
-                if ($container->has('inspect')) {
-                    $trace = '' . $container->get('inspect')->trace($throwable);
-                }
-                if ($container->has('logger')) {
-                    $container->get('logger')->error($trace ?? $throwable);
-                }
-            } catch (\Throwable $xcptn) {
-                // Log original exception.
-                error_log(
-                    get_class($throwable) . '(' . $throwable->getCode() . ')@' . $throwable->getFile() . ':'
-                    . $throwable->getLine() . ': ' . addcslashes($throwable->getMessage(), "\0..\37")
-                );
-                // Log this exception handler's own exception.
-                error_log(
-                    get_class($xcptn) . '(' . $xcptn->getCode() . ')@' . $xcptn->getFile() . ':'
-                    . $xcptn->getLine() . ': ' . addcslashes($xcptn->getMessage(), "\0..\37")
-                );
-            }
-            header('HTTP/1.1 500 Internal Server Error');
-            exit;
-        });
+        Bootstrap::setExceptionHandler($container, 'http');
 
         // PHP warning/notice handler; Slim doesn't handle those.
-        set_error_handler(function($severity, $message, $file, $line) use ($container) {
-            if (!(error_reporting() & $severity)) {
-                // Pass-thru to Slim phpErrorHandler.
-                return false;
-            }
-            try {
-                switch ($severity) {
-                    case E_WARNING:
-                    case E_CORE_WARNING:
-                    case E_COMPILE_WARNING:
-                    case E_USER_WARNING:
-                        switch ($severity) {
-                            case E_CORE_WARNING:
-                                $type = 'E_CORE_WARNING';
-                                break;
-                            case E_COMPILE_WARNING:
-                                $type = 'E_COMPILE_WARNING';
-                                break;
-                            case E_USER_WARNING:
-                                $type = 'E_USER_WARNING';
-                                break;
-                            default:
-                                $type = 'E_WARNING';
-                                break;
-                        }
-                        $msg = 'PHP ' . $type . '(' . $severity . ')@' . $file . ':' . $line . ': '
-                            . addcslashes($message, "\0..\37");
-                        if ($container->has('logger')) {
-                            $container->get('logger')->warning($msg);
-                        } else {
-                            error_log($msg);
-                        }
-                        return true;
-                    case E_NOTICE:
-                    case E_USER_NOTICE:
-                    case E_STRICT:
-                    case E_DEPRECATED:
-                    case E_USER_DEPRECATED:
-                        switch ($severity) {
-                            case E_USER_NOTICE:
-                                $type = 'E_USER_NOTICE';
-                                break;
-                            case E_STRICT:
-                                $type = 'E_STRICT';
-                                break;
-                            case E_DEPRECATED:
-                                $type = 'E_DEPRECATED';
-                                break;
-                            case E_USER_DEPRECATED:
-                                $type = 'E_USER_DEPRECATED';
-                                break;
-                            default:
-                                $type = 'E_NOTICE';
-                                break;
-                        }
-                        $msg = 'PHP ' . $type . '(' . $severity . ')@' . $file . ':' . $line . ': '
-                            . addcslashes($message, "\0..\37");
-                        if ($container->has('logger')) {
-                            $container->get('logger')->notice($msg);
-                        } else {
-                            error_log($msg);
-                        }
-                        return true;
-                }
-            } catch (\Throwable $ignore) {
-            }
-            // Pass-thru to Slim phpErrorHandler.
-            return false;
-        });
+        Bootstrap::setErrorHandler($container, 'http');
 
         // Slim request PHP error handler.
         Dependency::genericSet('phpErrorHandler', function () use ($container) {
@@ -491,6 +400,7 @@ abstract class HttpServiceSlim
                  *
                  * @see \SimpleComplex\Http\HttpResponseBody
                  */
+                $response = $response->withHeader('Content-Type', 'application/json');
                 $response->write(
                     json_encode([
                         'success' => false,
@@ -554,6 +464,7 @@ abstract class HttpServiceSlim
                  *
                  * @see \SimpleComplex\Http\HttpResponseBody
                  */
+                $response = $response->withHeader('Content-Type', 'application/json');
                 $response->write(
                     json_encode([
                         'success' => false,
