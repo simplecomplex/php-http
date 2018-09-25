@@ -217,6 +217,8 @@ abstract class HttpServiceSlim
      * - Access-Control-Allow-Origin; allow this sites
      * - Access-Control-Expose-Headers; allow that requestor reads
      *   those response headers
+     * - Access-Control-Allow-Credentials; allow that requestor sends
+     *   login credentials (like NTLM/Kerberos)
      *
      * Circumvent CORS (cross origin resource sharing) check in development.
      * Angular serves from other host in development;
@@ -243,6 +245,8 @@ abstract class HttpServiceSlim
             )->withHeader(
                 'Access-Control-Expose-Headers',
                 join(',', array_keys($response->getHeaders())) . ',Content-Length'
+            )->withHeader(
+                'Access-Control-Allow-Credentials', 'true'
             );
         }
         return $response;
