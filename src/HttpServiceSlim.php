@@ -219,6 +219,7 @@ abstract class HttpServiceSlim
      *   those response headers
      * - Access-Control-Allow-Credentials; allow that requestor sends
      *   login credentials (like NTLM/Kerberos)
+     *   Only if arg $requireCredentials.
      *
      * Circumvent CORS (cross origin resource sharing) check in development.
      * Angular serves from other host in development;
@@ -230,10 +231,12 @@ abstract class HttpServiceSlim
      * @see HttpService::crossOriginSiteAllowed()
      *
      * @param \Slim\Http\Response $response
+     * @param bool $requireCredentials
+     *      Must be true when using Kerberos authentication or likewise.
      *
      * @return \Slim\Http\Response
      */
-    public static function crossOriginSetHeaders(Response $response) : Response
+    public static function crossOriginSetHeaders(Response $response, bool $requireCredentials = false) : Response
     {
         if (static::$crossOriginSiteAllowed) {
             // Allow requestor to see all relevant response headers;
@@ -245,9 +248,12 @@ abstract class HttpServiceSlim
             )->withHeader(
                 'Access-Control-Expose-Headers',
                 join(',', array_keys($response->getHeaders())) . ',Content-Length'
-            )->withHeader(
-                'Access-Control-Allow-Credentials', 'true'
             );
+            if ($requireCredentials) {
+                $response = $response->withHeader(
+                    'Access-Control-Allow-Credentials', 'true'
+                );
+            }
         }
         return $response;
     }
@@ -301,7 +307,11 @@ abstract class HttpServiceSlim
     ) : Response {
         if (static::$crossOriginSiteAllowed) {
             // Set Access-Control-Allow-Origin, Access-Control-Expose-Headers.
-            $response = static::crossOriginSetHeaders($response);
+            $response = static::crossOriginSetHeaders(
+                $response,
+                // Don't ever require authentication for OPTIONS request.
+                false
+            );
             // If the request contains custom headers, they will be listed
             // in request Access-Control-Request-Headers.
             if ($request->hasHeader('Access-Control-Request-Headers')) {

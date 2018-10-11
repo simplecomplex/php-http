@@ -1,3 +1,10 @@
+SimpleComplex/Http 2.x, 2018-10-11
+----------------------------------
+- Do not force CORS Access-Control-Allow-Credentials header
+  even when no authentication involved.
+  And never send that darned header if OPITONS request.
+- Release 2.1.4.
+
 SimpleComplex/Http 2.x, 2018-09-25
 ----------------------------------
 - Send Access-Control-Allow-Credentials header.
