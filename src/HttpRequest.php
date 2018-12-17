@@ -926,7 +926,7 @@ class HttpRequest extends Explorable
      *
      * @code
      * # CLI delete cached validation rule set.
-     * php cli.phpsh cache-delete http-response_validation-rule-set provider.service.endpoint.METHODorAlias
+     * php cli.php cache-delete http-response_validation-rule-set provider.service.endpoint.METHODorAlias
      * @endcode
      *
      * @param HttpResponse $response
@@ -1219,7 +1219,7 @@ class HttpRequest extends Explorable
      *
      * @code
      * # CLI delete cached mock response.
-     * php cli.phpsh cache-delete http-response_mock provider.service.endpoint.METHODorAlias
+     * php cli.php cache-delete http-response_mock provider.service.endpoint.METHODorAlias
      * @endcode
      *
      * @param string $variant

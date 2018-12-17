@@ -52,36 +52,36 @@ Sounds like a lot of work, but it isn't really.
 
 ```bash
 # Show provider settings.
-php cli.phpsh config-get -a global http-provider.prvdr
+php cli.php config-get -a global http-provider.prvdr
 
 # Show service settings.
-php cli.phpsh config-get -a global http-service.prvdr.example-service
+php cli.php config-get -a global http-service.prvdr.example-service
 
 # Show endpoint settings.
-php cli.phpsh config-get -a global http-endpoint.prvdr.example-service.ndpnt
+php cli.php config-get -a global http-endpoint.prvdr.example-service.ndpnt
 
 # Show method settings.
-php cli.phpsh config-get -a global http-method.prvdr.example-service.ndpnt.GET
+php cli.php config-get -a global http-method.prvdr.example-service.ndpnt.GET
 ```
 
 ##### Validation rule sets #####
 
 ```bash
 # Show cached validation rule set.
-php cli.phpsh cache-get http-response_validation-rule-set prvdr.example-service.ndpnt.GET
+php cli.php cache-get http-response_validation-rule-set prvdr.example-service.ndpnt.GET
 
 # Delete cached validation rule set.
-php cli.phpsh cache-delete http-response_validation-rule-set prvdr.example-service.ndpnt.GET
+php cli.php cache-delete http-response_validation-rule-set prvdr.example-service.ndpnt.GET
 ```
 
 ##### Mock responses #####
 
 ```bash
 # Show cached mock response.
-php cli.phpsh cache-get http-response_mock prvdr.example-service.ndpnt.GET
+php cli.php cache-get http-response_mock prvdr.example-service.ndpnt.GET
 
 # Delete cached mock response.
-php cli.phpsh cache-delete http-response_mock prvdr.example-service.ndpnt.GET
+php cli.php cache-delete http-response_mock prvdr.example-service.ndpnt.GET
 ```
   </details>
 
