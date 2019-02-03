@@ -1,3 +1,9 @@
+SimpleComplex/Http 2.x, 2019-02-03
+----------------------------------
+- Standard prefab HTTP responses shan't promise in body.message
+  that the incident got logged.
+- Release 2.1.5.
+
 SimpleComplex/Http 2.x, 2018-10-11
 ----------------------------------
 - Do not force CORS Access-Control-Allow-Credentials header

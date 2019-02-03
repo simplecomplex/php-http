@@ -2,7 +2,7 @@
 /**
  * SimpleComplex PHP Http
  * @link      https://github.com/simplecomplex/php-http
- * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @copyright Copyright (c) 2017-2018 Jacob Friis Mathiasen
  * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);

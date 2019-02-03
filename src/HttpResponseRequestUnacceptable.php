@@ -2,7 +2,7 @@
 /**
  * SimpleComplex PHP Http
  * @link      https://github.com/simplecomplex/php-http
- * @copyright Copyright (c) 2017 Jacob Friis Mathiasen
+ * @copyright Copyright (c) 2017-2019 Jacob Friis Mathiasen
  * @license   https://github.com/simplecomplex/php-http/blob/master/LICENSE (MIT License)
  */
 declare(strict_types=1);
@@ -59,12 +59,12 @@ class HttpResponseRequestUnacceptable extends HttpResponse
                 . '\n'
                 // Regressive: application-id or common or http.
                 . $locale->text(
-                    $container->get('application-id') . ':error-suffix_user-report-error',
+                    $container->get('application-id') . ':error-suffix_user-report-error_no-log',
                     $replacers,
                     $locale->text(
-                        'common:error-suffix_user-report-error',
+                        'common:error-suffix_user-report-error_no-log',
                         $replacers,
-                        $locale->text('http:error-suffix_user-report-error', $replacers)
+                        $locale->text('http:error-suffix_user-report-error_no-log', $replacers)
                     )
                 ),
                 $final_code
