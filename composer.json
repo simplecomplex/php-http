@@ -13,7 +13,7 @@
     ],
     "require": {
         "psr/log": "^1.0",
-        "simplecomplex/utils": "^1.9 || dev-develop",
+        "simplecomplex/utils": "^1.9 || ^2.0 || dev-develop",
         "simplecomplex/cache": "^1.3 || dev-develop",
         "simplecomplex/config": "^2.1 || dev-develop",
         "simplecomplex/locale": "^2.1 || dev-develop",
