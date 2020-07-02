@@ -21,7 +21,7 @@
         "simplecomplex/locale": "^2.1 || dev-develop",
         "simplecomplex/validate": "^2.1 || ^1.0 || dev-develop",
         "simplecomplex/restmini": "^1.1.2 || dev-develop",
-        "simplecomplex/inspect": "^2.2.5 || dev-develop"
+        "simplecomplex/inspect": "^3 || ^2.2.5 || dev-develop"
     },
     "suggest": {
         "slim/slim": "^3.8.1"
